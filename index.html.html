@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Math Facts</title>
+<meta name="theme-color" content="#23443a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Math Facts">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{
+  --board:#23443a; --board-deep:#1a3730; --frame:#7a5a3e; --wall:#e6e0d2;
+  --chalk:#f2f0e6; --chalk-2:rgba(242,240,230,.68); --chalk-3:rgba(242,240,230,.3); --chalk-4:rgba(242,240,230,.12);
+  --yellow:#f2cf6b; --yellow-dim:rgba(242,207,107,.28); --red:#f06a55; --red-dim:rgba(240,106,85,.3); --ink:#1b2824;
+  --font:"Andika","Trebuchet MS",system-ui,sans-serif;
+  --hand:"Patrick Hand","Segoe Print","Bradley Hand",cursive;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --wall:#0e1512; --board:#1f3d34; --board-deep:#172f29; --frame:#5c4430; color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --wall:#0e1512; --board:#1f3d34; --board-deep:#172f29; --frame:#5c4430; color-scheme:dark; }
+
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100%;touch-action:manipulation;background:var(--board);color:var(--chalk);font-family:var(--font);font-size:17px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--board)}
+body.in-session{overflow:hidden}
+
+.app{max-width:1080px;margin:0 auto;background:var(--board);position:relative}
+.app::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .22 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>")}
+@media (min-width:1100px){
+  body{background:var(--wall)}
+  .app{min-height:calc(100vh - 28px);margin:14px auto;border:10px solid var(--frame);border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .session{height:calc(100vh - 48px)}
+}
+
+/* header */
+.top{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--chalk-3);position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--board)}
+.in-session .top{display:none}
+.student-btn{display:flex;align-items:center;gap:6px;background:transparent;border:1.5px solid var(--chalk-3);border-radius:999px;padding:6px 14px 6px 10px;cursor:pointer;max-width:46%;position:relative}
+.student-btn b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.student-btn .dot{width:10px;height:10px;border-radius:50%;background:var(--yellow);flex:none}
+.tabs{margin-left:auto;display:flex;gap:2px}
+.tab{background:transparent;border:0;border-bottom:2px solid transparent;padding:8px 10px;cursor:pointer;color:var(--chalk-2);border-radius:6px 6px 0 0}
+.tab[aria-current="page"]{color:var(--chalk);border-bottom-color:var(--yellow)}
+.tab.icon{padding:8px}
+@media (max-width:480px){ .tab{padding:8px 5px;font-size:14px} .student-btn{max-width:40%;padding:6px 10px 6px 8px} .top{overflow-x:auto} }
+
+main{position:relative}
+.page{padding:18px 16px 40px;max-width:860px;margin:0 auto}
+h1{font-size:1.45rem;margin:0 0 4px;font-weight:700}
+h2{font-size:1.1rem;margin:28px 0 10px;font-weight:700;display:flex;align-items:baseline;gap:10px}
+h2 small{color:var(--chalk-2);font-weight:400;font-size:.9rem}
+h2:first-child,h1+h2,h1+p+h2{margin-top:14px}
+p{margin:.3em 0}
+.muted{color:var(--chalk-2)}
+.small{font-size:.9rem}
+hr{border:0;border-top:1px solid var(--chalk-3);margin:18px 0}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:1.5px solid var(--chalk-2);border-radius:10px;padding:11px 18px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;line-height:1.2;min-height:44px}
+.btn:active{background:var(--chalk-4)}
+.btn.primary{background:var(--chalk);color:var(--ink);border-color:var(--chalk)}
+.btn.primary:active{background:#dcd9cc}
+.btn.yellow{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.big{font-size:1.15rem;padding:14px 22px;flex:1}
+.btn.sm{padding:6px 12px;min-height:36px;font-size:.95rem}
+.btn[disabled]{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--chalk-3);border-radius:10px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:9px 16px;cursor:pointer;min-width:52px;font-size:1.05rem}
+.seg button[aria-pressed="true"]{background:var(--chalk);color:var(--ink)}
+
+/* level tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tile{text-align:left;background:var(--chalk-4);border:1.5px solid transparent;border-radius:12px;padding:12px 12px 10px;cursor:pointer;touch-action:manipulation;display:flex;flex-direction:column;gap:6px;min-height:92px}
+.tile:active{border-color:var(--chalk-2)}
+.tile .t{font-weight:700;line-height:1.2}
+.tile .s{color:var(--chalk-2);font-size:.85rem}
+.tile .foot{display:flex;align-items:center;gap:10px;margin-top:auto}
+.bar{flex:1;height:6px;background:var(--chalk-4);border-radius:3px;overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0;width:0;background:var(--chalk);border-radius:3px}
+.bar.done i{background:var(--yellow)}
+.grade{font-family:var(--hand);color:var(--red);font-size:1.25rem;line-height:1;min-width:1.1em;text-align:center;white-space:nowrap}
+.grade.empty{color:var(--chalk-3);font-size:1.1rem}
+.pill{display:inline-block;border:1px solid var(--chalk-3);border-radius:999px;padding:3px 10px;font-size:.9rem;white-space:nowrap}
+.pill.red{border-color:var(--red-dim);color:var(--red)}
+
+/* bottom sheet + modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .18s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:min(100%,620px);background:var(--board-deep);border:1px solid var(--chalk-3);border-bottom:0;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));z-index:21;transition:transform .22s ease-out;max-height:85%;overflow:auto;box-shadow:0 -10px 40px rgba(0,0,0,.35)}
+.sheet.open{transform:translate(-50%,0)}
+.sheet h3{margin:0 0 4px;font-size:1.3rem}
+.sheet .x{position:absolute;right:10px;top:10px;background:transparent;border:0;font-size:1.6rem;line-height:1;padding:6px 10px;cursor:pointer;color:var(--chalk-2)}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92%,420px);background:var(--board-deep);border:1px solid var(--chalk-3);border-radius:16px;padding:20px;z-index:31;display:none}
+.modal.open{display:block}
+.scrim.z{z-index:30}
+.menu{position:absolute;left:10px;top:48px;background:var(--board-deep);border:1px solid var(--chalk-3);border-radius:12px;padding:6px;z-index:15;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}
+.menu.open{display:block}
+.menu button{display:flex;width:100%;text-align:left;background:transparent;border:0;padding:10px 12px;border-radius:8px;cursor:pointer;align-items:center;gap:10px}
+.menu button:active{background:var(--chalk-4)}
+.menu button[aria-current="true"]{background:var(--chalk-4)}
+.menu .sep{border-top:1px solid var(--chalk-3);margin:6px 0}
+
+/* session */
+.session{height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+.sbar{display:flex;align-items:center;gap:10px;padding:8px 10px 6px;flex:none}
+.sbar .title{font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sbar .count{margin-left:auto;color:var(--chalk-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sbar .clock{font-variant-numeric:tabular-nums;font-weight:700;min-width:3.2em;text-align:right}
+.sbar .clock.low{color:var(--red)}
+.quit{background:transparent;border:1.5px solid var(--chalk-3);border-radius:999px;width:38px;height:38px;cursor:pointer;font-size:1.3rem;line-height:1;flex:none;color:var(--chalk-2)}
+.timerbar{height:5px;background:var(--chalk-4);flex:none}
+.timerbar i{display:block;height:100%;width:100%;background:var(--yellow);transition:width .2s linear}
+.sbody{flex:1;min-height:0;display:flex;flex-direction:column}
+.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:8px 16px}
+.prob{--big:clamp(60px,15vw,124px);font-size:var(--big);line-height:1.05;font-variant-numeric:tabular-nums;font-weight:700;user-select:none;-webkit-user-select:none}
+.prob.stacked{display:inline-flex;flex-direction:column;align-items:stretch;text-align:right}
+.prob.stacked .ln{display:flex;justify-content:space-between;gap:.3em}
+.prob.stacked .op{color:var(--chalk-2);font-weight:400}
+.prob.stacked .ln.first .op{visibility:hidden}
+.prob.stacked .rule{border-top:4px solid var(--chalk);margin:.06em 0 .04em;border-radius:2px}
+.prob.line{--big:clamp(44px,10.5vw,104px);display:inline-flex;align-items:baseline;gap:.22em;white-space:nowrap}
+.prob.line .op{color:var(--chalk-2);font-weight:400}
+.ans{min-width:1.3em;text-align:right;color:var(--yellow);position:relative;display:inline-block;min-height:1em}
+.ans.empty::after{content:"";position:absolute;right:0;bottom:.08em;width:1.1em;height:.06em;background:var(--yellow);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.mark svg{width:min(34vw,180px);height:min(34vw,180px)}
+.mark path{fill:none;stroke-width:14;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:400;stroke-dashoffset:400;animation:draw .28s ease-out forwards}
+.mark.ok path{stroke:var(--chalk)}
+.mark.bad path{stroke:var(--red)}
+@keyframes draw{to{stroke-dashoffset:0}}
+.correction{position:absolute;left:0;right:0;bottom:6%;text-align:center;font-family:var(--hand);color:var(--red);font-size:clamp(28px,6vw,46px);line-height:1.1}
+.correction small{display:block;font-family:var(--font);font-size:.95rem;color:var(--chalk-2);margin-top:4px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:9px;padding:8px 14px 14px;height:min(42vh,400px);height:min(42dvh,400px);flex:none}
+.key{font-size:2.1rem;font-weight:700;border:1.5px solid var(--chalk-3);border-radius:14px;background:var(--chalk-4);cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center}
+.key:active,.key.down{background:var(--chalk-3)}
+.key.enter{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
+.key.enter:active,.key.enter.down{background:#d8b85a}
+.key.back{font-size:1.6rem}
+@media (orientation:landscape) and (min-width:700px){
+  .sbody{flex-direction:row}
+  .pad{height:auto;width:min(44%,440px);padding:12px 16px 16px}
+}
+
+/* results */
+.report{border:2px solid var(--chalk-3);border-radius:16px;padding:22px 20px;margin:12px 0 18px;display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:center}
+.report .biggrade{font-family:var(--hand);color:var(--red);font-size:clamp(58px,15vw,112px);line-height:.9;grid-row:span 3;transform:rotate(-5deg);text-align:center;white-space:nowrap}
+.report .line1{font-size:1.5rem;font-weight:700}
+.report .line2,.report .line3{color:var(--chalk-2)}
+.report .best{color:var(--yellow);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--chalk-3);border-radius:10px;padding:6px 10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip.red{border-color:var(--red-dim);color:var(--red)}
+.chip.red b{color:var(--chalk)}
+
+/* tables */
+.grid{display:grid;gap:3px;font-variant-numeric:tabular-nums;max-width:560px;width:100%;user-select:none;-webkit-user-select:none}
+.grid .c{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:clamp(10px,2.3vw,15px);background:var(--chalk-4)}
+.grid .hd{background:transparent;color:var(--chalk-2);font-weight:700;cursor:pointer;border:1.5px solid transparent}
+.grid .hd:active{border-color:var(--chalk-2)}
+.grid .hd[aria-pressed="true"]{color:var(--ink);background:var(--yellow)}
+.grid .c.hl{background:var(--yellow-dim)}
+.grid .c.corner{background:transparent}
+.grid .c.m{background:var(--chalk);color:var(--ink)}
+.grid .c.l{background:var(--yellow-dim);box-shadow:inset 0 0 0 1.5px var(--yellow)}
+.grid .c.x{background:var(--red-dim);box-shadow:inset 0 0 0 1.5px var(--red)}
+.grid .c.n{background:transparent;box-shadow:inset 0 0 0 1px var(--chalk-4)}
+.grid .c.cell{cursor:pointer}
+.grid .c.cell[aria-pressed="true"]{outline:2px solid var(--chalk);outline-offset:-1px}
+.facts{columns:2;column-gap:28px;max-width:560px;font-size:1.35rem;font-variant-numeric:tabular-nums;margin:12px 0}
+@media (min-width:600px){.facts{columns:3}}
+.facts .f{display:flex;gap:.35em;padding:5px 0;border-bottom:1px dashed var(--chalk-4);break-inside:avoid;cursor:pointer}
+.facts .f .q{min-width:5.2ch;text-align:right}
+.facts .f .a{color:var(--yellow);font-weight:700;min-width:2.2ch}
+.facts.cover .f:not(.show) .a{color:transparent;border-bottom:2px solid var(--chalk-3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.9rem;color:var(--chalk-2);margin:8px 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.detail{min-height:1.6em;color:var(--chalk-2);margin:6px 0 2px}
+.numpick{display:flex;flex-wrap:wrap;gap:6px}
+.numpick button{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--chalk-3);background:transparent;cursor:pointer;font-weight:700;font-size:1.05rem}
+.numpick button[aria-pressed="true"]{background:var(--yellow);color:var(--ink);border-color:var(--yellow)}
+
+/* progress */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{border:1.5px solid var(--chalk-3);border-radius:12px;padding:12px 14px}
+.stat .v{font-size:1.9rem;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .k{color:var(--chalk-2);font-size:.9rem}
+table.log{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.log th{text-align:left;font-weight:400;color:var(--chalk-2);border-bottom:1px solid var(--chalk-3);padding:6px 6px;font-size:.9rem}
+table.log td{padding:8px 6px;border-bottom:1px solid var(--chalk-4);vertical-align:middle}
+table.log td.g{font-family:var(--hand);color:var(--red);font-size:1.3rem;line-height:1;white-space:nowrap}
+.chart{width:100%;height:auto;max-width:640px;display:block;overflow:visible}
+.chart text{font-family:var(--font);font-size:11px;fill:var(--chalk-2)}
+.chart .axis{stroke:var(--chalk-3);stroke-width:1}
+.chart .l1{stroke:var(--chalk);stroke-width:2.5;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chart .l2{stroke:var(--yellow);stroke-width:2.5;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.chart .p1{fill:var(--chalk)} .chart .p2{fill:var(--yellow)}
+.empty{border:1.5px dashed var(--chalk-3);border-radius:12px;padding:18px;color:var(--chalk-2);text-align:center}
+
+/* calendar + nightly goal */
+.tonight{border:1.5px solid var(--chalk-3);border-radius:12px;padding:12px 14px;margin:12px 0 4px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.tonight .lbl{flex:1;min-width:170px}
+.tonight .lbl b{font-size:1.05rem}
+.tonight .bar{flex:2;min-width:140px;height:10px}
+.tonight.done{border-color:var(--yellow)}
+.tonight.done .bar i{background:var(--yellow)}
+.calhead{display:flex;align-items:center;gap:8px;margin:0 0 8px;max-width:560px}
+.calhead b{font-size:1.1rem;flex:1;text-align:center}
+.calhead button{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--chalk-3);background:transparent;cursor:pointer;font-size:1.3rem;line-height:1}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:560px;user-select:none;-webkit-user-select:none}
+.cal .wd{text-align:center;color:var(--chalk-2);font-size:.85rem;padding:4px 0}
+.cal .d{aspect-ratio:1;border-radius:8px;border:1.5px solid transparent;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-variant-numeric:tabular-nums;padding:0;box-shadow:inset 0 0 0 1px var(--chalk-4)}
+.cal .d .n{font-size:.95rem;line-height:1}
+.cal .d .m{font-size:.72rem;color:var(--chalk-2);line-height:1;min-height:.72rem}
+.cal .d.some{background:var(--yellow-dim);box-shadow:inset 0 0 0 1.5px var(--yellow)}
+.cal .d.goal{background:var(--chalk);color:var(--ink);box-shadow:none}
+.cal .d.goal .m{color:var(--ink)}
+.cal .d.today{border-color:var(--red)}
+.cal .d.future{opacity:.45;cursor:default}
+.cal .d[aria-pressed="true"]{outline:2px solid var(--chalk);outline-offset:-1px}
+
+/* settings */
+.field{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--chalk-4);flex-wrap:wrap}
+.field .lab{flex:1;min-width:180px}
+.field .lab small{display:block;color:var(--chalk-2)}
+input[type=text],select{font:inherit;background:var(--chalk-4);color:var(--chalk);border:1.5px solid var(--chalk-3);border-radius:8px;padding:9px 12px;min-height:42px}
+select{appearance:auto}
+.srow{display:flex;gap:8px;align-items:center;padding:8px 0;flex-wrap:wrap}
+.srow input[type=text]{flex:1;min-width:140px}
+.switch{position:relative;width:52px;height:30px;border-radius:15px;background:var(--chalk-3);border:0;cursor:pointer;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:var(--chalk);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--yellow)}
+.switch[aria-checked="true"]::after{left:25px}
+.sync{font-size:.9rem;color:var(--chalk-2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top" id="top"></header>
+  <main id="main"></main>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="scrim z" id="scrim2"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const PRACTICE_N=20, SESSION_CAP=300;
+
+/* ---------------- facts ---------------- */
+const OPS={
+  add:{sym:'+',name:'Addition',rowLabel:'first number',colLabel:'second number'},
+  sub:{sym:'−',name:'Subtraction',rowLabel:'answer',colLabel:'number taken away'},
+  mul:{sym:'×',name:'Multiplication',rowLabel:'first number',colLabel:'second number'},
+  div:{sym:'÷',name:'Division',rowLabel:'answer',colLabel:'divided by'}
+};
+function makeFact(op,i,j){
+  let a,b,ans;
+  if(op==='add'){a=i;b=j;ans=i+j;}
+  else if(op==='sub'){a=i+j;b=j;ans=i;}
+  else if(op==='mul'){a=i;b=j;ans=i*j;}
+  else {a=i*j;b=j;ans=i;}
+  return {op,i,j,a,b,ans,key:op+':'+i+','+j};
+}
+const ALL={};
+['add','sub','mul','div'].forEach(op=>{const arr=[];for(let i=0;i<=12;i++)for(let j=(op==='div'?1:0);j<=12;j++)arr.push(makeFact(op,i,j));ALL[op]=arr;});
+const FACT_INDEX={};Object.values(ALL).forEach(arr=>arr.forEach(f=>FACT_INDEX[f.key]=f));
+const factFromKey=k=>FACT_INDEX[k];
+const factText=f=>f.a+' '+OPS[f.op].sym+' '+f.b;
+const TOTAL_FACTS=Object.values(ALL).reduce((n,a)=>n+a.length,0);
+
+/* ---------------- levels ---------------- */
+const R10=f=>f.i<=10&&f.j<=10;
+const tbl=n=>f=>f.i===n||f.j===n;
+const LEVELS=[
+  {id:'g1-add-01',grade:1,title:'Adding 0 and 1',ops:['add'],f:f=>R10(f)&&Math.min(f.i,f.j)<=1,count:20,secs:120},
+  {id:'g1-add-23',grade:1,title:'Adding 2 and 3',ops:['add'],f:f=>R10(f)&&(Math.min(f.i,f.j)===2||Math.min(f.i,f.j)===3),count:20,secs:120},
+  {id:'g1-doubles',grade:1,title:'Doubles',note:'0 + 0 up to 10 + 10',ops:['add'],f:f=>R10(f)&&f.i===f.j,count:20,secs:120},
+  {id:'g1-sum10',grade:1,title:'Sums to 10',ops:['add'],f:f=>R10(f)&&f.i+f.j<=10,count:20,secs:120},
+  {id:'g1-sum20',grade:1,title:'Sums to 20',note:'Every addition fact up to 10 + 10',ops:['add'],f:R10,count:25,secs:150},
+  {id:'g1-sub10',grade:1,title:'Subtracting within 10',ops:['sub'],f:f=>R10(f)&&f.i+f.j<=10,count:20,secs:120},
+  {id:'g1-sub20',grade:1,title:'Subtracting within 20',ops:['sub'],f:R10,count:25,secs:150},
+  {id:'g1-mix',grade:1,title:'Add and subtract within 20',ops:['add','sub'],f:R10,count:30,secs:180},
+  {id:'g2-add12',grade:2,title:'Addition table to 12',ops:['add'],f:()=>true,count:30,secs:150},
+  {id:'g2-sub12',grade:2,title:'Subtraction table to 12',ops:['sub'],f:()=>true,count:30,secs:150},
+  {id:'g2-mix12',grade:2,title:'Add and subtract to 12',ops:['add','sub'],f:()=>true,count:40,secs:200},
+  {id:'g2-mul-2',grade:2,title:'2 times table',ops:['mul'],f:tbl(2),count:26,secs:120},
+  {id:'g2-mul-5',grade:2,title:'5 times table',ops:['mul'],f:tbl(5),count:26,secs:120},
+  {id:'g2-mul-10',grade:2,title:'10 times table',ops:['mul'],f:tbl(10),count:26,secs:120},
+  {id:'g2-mul-2510',grade:2,title:'2s, 5s and 10s mixed',ops:['mul'],f:f=>tbl(2)(f)||tbl(5)(f)||tbl(10)(f),count:30,secs:150}
+];
+[3,4,6,7,8,9,11,12].forEach(n=>LEVELS.push({id:'g3-mul-'+n,grade:3,title:n+' times table',ops:['mul'],f:tbl(n),count:26,secs:120}));
+LEVELS.push(
+  {id:'g3-mul-2-5',grade:3,title:'Times tables 2 to 5',ops:['mul'],f:f=>[2,3,4,5].some(n=>tbl(n)(f)),count:36,secs:180},
+  {id:'g3-mul-6-9',grade:3,title:'Times tables 6 to 9',ops:['mul'],f:f=>[6,7,8,9].some(n=>tbl(n)(f)),count:36,secs:180},
+  {id:'g3-mul-10-12',grade:3,title:'Times tables 10 to 12',ops:['mul'],f:f=>[10,11,12].some(n=>tbl(n)(f)),count:36,secs:180},
+  {id:'g3-mul-all',grade:3,title:'All times tables 0 to 12',ops:['mul'],f:()=>true,count:40,secs:180},
+  {id:'g3-hundred',grade:3,title:'The hundred',note:'The classic: 100 multiplication facts in 5 minutes',ops:['mul'],f:()=>true,count:100,secs:300}
+);
+for(let n=2;n<=12;n++)LEVELS.push({id:'g3-div-'+n,grade:3,title:'Dividing by '+n,ops:['div'],f:f=>f.j===n,count:20,secs:100});
+LEVELS.push(
+  {id:'g3-div-2-5',grade:3,title:'Dividing by 2 to 5',ops:['div'],f:f=>f.j>=2&&f.j<=5,count:36,secs:180},
+  {id:'g3-div-6-9',grade:3,title:'Dividing by 6 to 9',ops:['div'],f:f=>f.j>=6&&f.j<=9,count:36,secs:180},
+  {id:'g3-div-10-12',grade:3,title:'Dividing by 10 to 12',ops:['div'],f:f=>f.j>=10,count:36,secs:180},
+  {id:'g3-div-all',grade:3,title:'All division 1 to 12',ops:['div'],f:()=>true,count:40,secs:180},
+  {id:'g3-md-all',grade:3,title:'Multiply and divide mixed',ops:['mul','div'],f:()=>true,count:40,secs:200},
+  {id:'g3-all',grade:3,title:'Everything, all four',note:'Add, subtract, multiply and divide to 12',ops:['add','sub','mul','div'],f:()=>true,count:40,secs:200}
+);
+const LEVEL_BY_ID={};LEVELS.forEach(l=>LEVEL_BY_ID[l.id]=l);
+function pool(lv){if(!lv._pool){lv._pool=[];lv.ops.forEach(op=>ALL[op].forEach(f=>{if(lv.f(f))lv._pool.push(f);}));}return lv._pool;}
+const GRADE_NAMES={1:'First grade',2:'Second grade',3:'Third grade'};
+const GRADE_NOTES={1:'Addition and subtraction facts to 20.',2:'The full tables to 12, and the first times tables.',3:'Times tables and division to 12. (2s, 5s and 10s are in second grade.)'};
+
+/* ---------------- storage ---------------- */
+const LS={roster:'mathfacts.roster',progress:id=>'mathfacts.progress.'+id,device:'mathfacts.device'};
+function loadJSON(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function defaultRoster(){return {students:[{id:'s_ainsley',name:'Ainsley',grade:1},{id:'s_leighton',name:'Leighton',grade:3}],settings:{autoSubmit:true,layout:'stacked',timing:1,target:3,goal:10},updatedAt:0};}
+function blankProgress(){return {facts:{},sessions:[],best:{},updatedAt:0};}
+let roster=loadJSON(LS.roster)||defaultRoster();
+if(!roster.settings)roster.settings=defaultRoster().settings;
+if(!roster.students||!roster.students.length)roster.students=defaultRoster().students;
+let device=loadJSON(LS.device)||{};
+const progress={};
+function getProgress(id){if(!progress[id]){const p=loadJSON(LS.progress(id))||blankProgress();if(!p.facts)p.facts={};if(!p.sessions)p.sessions=[];if(!p.best)p.best={};progress[id]=p;}return progress[id];}
+function activeStudent(){let s=roster.students.find(x=>x.id===device.activeId);if(!s){s=roster.students[0];device.activeId=s.id;saveJSON(LS.device,device);}return s;}
+function saveRoster(){roster.updatedAt=Date.now();saveJSON(LS.roster,roster);queueWrite('roster/main',roster);}
+function saveProgress(id){const p=getProgress(id);p.updatedAt=Date.now();saveJSON(LS.progress(id),p);queueWrite('progress/'+id,p);}
+
+/* db sync (shared across devices when the page is opened signed in) */
+let db=null,syncState='local';const writeChain={};
+function queueWrite(path,data){
+  if(!db)return;
+  const body=JSON.parse(JSON.stringify(data));
+  writeChain[path]=(writeChain[path]||Promise.resolve()).then(()=>db.doc(path).set(body)).then(()=>{syncState='synced';renderSyncNote();}).catch(e=>{syncState='error';renderSyncNote();});
+}
+function mergeProgress(local,remote){
+  const out={facts:{},sessions:[],best:{},updatedAt:Math.max(local.updatedAt||0,remote.updatedAt||0)};
+  const keys=new Set([...Object.keys(local.facts||{}),...Object.keys(remote.facts||{})]);
+  keys.forEach(k=>{const a=local.facts[k],b=(remote.facts||{})[k];out.facts[k]=(!a)?b:(!b)?a:((b.l||0)>=(a.l||0)?b:a);});
+  const seen={};[...(remote.sessions||[]),...(local.sessions||[])].forEach(s=>{if(!seen[s.id])seen[s.id]=s;});
+  out.sessions=Object.values(seen).sort((a,b)=>a.ts-b.ts).slice(-SESSION_CAP);
+  const lv=new Set([...Object.keys(local.best||{}),...Object.keys(remote.best||{})]);
+  lv.forEach(k=>{const a=local.best[k],b=(remote.best||{})[k];out.best[k]=(!a)?b:(!b)?a:(better(b,a)?b:a);});
+  return out;
+}
+function better(x,y){return x.pct>y.pct||(x.pct===y.pct&&x.secs<y.secs);}
+async function initDb(){
+  try{if(!window.claude||typeof window.claude.use!=='function')return;db=await window.claude.use('db');}catch(e){db=null;}
+  if(!db)return;
+  syncState='synced';renderSyncNote();
+  db.doc('roster/main').onSnapshot(snap=>{
+    if(snap.exists){const r=snap.data();if((r.updatedAt||0)>(roster.updatedAt||0)){roster=JSON.parse(JSON.stringify(r));saveJSON(LS.roster,roster);if(!S)render();}
+      else if((roster.updatedAt||0)>(r.updatedAt||0))queueWrite('roster/main',roster);}
+    else if(roster.updatedAt>0)queueWrite('roster/main',roster);
+  },()=>{db=null;syncState='error';renderSyncNote();});
+  let first=true;
+  db.collection('progress').onSnapshot(qs=>{
+    const present=new Set();
+    qs.docChanges().forEach(ch=>{if(ch.type==='removed')return;const id=ch.doc.id;present.add(id);const remote=ch.doc.data();const local=getProgress(id);
+      const merged=mergeProgress(local,remote);Object.assign(local,merged);saveJSON(LS.progress(id),local);
+      if(JSON.stringify(local)!==JSON.stringify(remote))queueWrite('progress/'+id,local);});
+    qs.docs.forEach(d=>present.add(d.id));
+    if(first){first=false;roster.students.forEach(s=>{const p=getProgress(s.id);if(!present.has(s.id)&&p.updatedAt>0)queueWrite('progress/'+s.id,p);});}
+    if(!S&&(state.view==='progress'||state.view==='levels'))render();
+  },()=>{});
+}
+function renderSyncNote(){const el=$('#syncnote');if(!el)return;el.textContent=syncState==='synced'?'Progress is saved to your Claude account and shared across devices.':syncState==='error'?'Could not sync to your account right now. Progress is saved on this device.':(window.claude?'Progress is saved on this device. Open this page signed in to sync across devices.':'Progress is saved on this device.');}
+
+/* ---------------- mastery ---------------- */
+function targetTenths(op){const t=Number(roster.settings.target)||3;return (t+((op==='mul'||op==='div')?1:0))*10;}
+function median3(arr){const s=arr.slice(-3).sort((a,b)=>a-b);return s[Math.floor((s.length-1)/2)];}
+function stateOf(rec,op){
+  if(!rec||!rec.n)return 'new';
+  const r=rec.r||[],t=rec.t||[];const last3=r.slice(-3);
+  if(last3.length>=3&&last3.every(x=>x===1)&&median3(t)<=targetTenths(op))return 'mastered';
+  if(r[r.length-1]===0||last3.filter(x=>x===0).length>=2)return 'trouble';
+  return 'learning';
+}
+function recordAttempt(p,f,ok,ms){
+  const rec=p.facts[f.key]||(p.facts[f.key]={n:0,c:0,r:[],t:[],l:0});
+  rec.n++;if(ok)rec.c++;rec.r.push(ok?1:0);rec.t.push(Math.min(600,Math.round(ms/100)));
+  if(rec.r.length>6)rec.r.shift();if(rec.t.length>6)rec.t.shift();rec.l=Date.now();
+}
+function levelStats(lv,p){const facts=pool(lv);let m=0;facts.forEach(f=>{if(stateOf(p.facts[f.key],f.op)==='mastered')m++;});return {total:facts.length,mastered:m,pct:facts.length?Math.round(100*m/facts.length):0};}
+function weakFacts(p,facts,limit){
+  const out=[];facts.forEach(f=>{const rec=p.facts[f.key];if(!rec||!rec.n)return;const st=stateOf(rec,f.op);if(st==='mastered')return;
+    const misses=(rec.r||[]).filter(x=>x===0).length;const slow=rec.t&&rec.t.length?median3(rec.t):0;out.push({f,rec,st,score:misses*100+slow});});
+  return out.sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+function fmtTime(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+function dayKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function goalSecs(){return (Number(roster.settings.goal)||10)*60;}
+function byDay(p){const m={};(p.sessions||[]).forEach(s=>{const k=dayKey(s.ts);if(!m[k])m[k]={secs:0,list:[]};m[k].secs+=s.secs||0;m[k].list.push(s);});return m;}
+function goalStreak(days){let n=0;const g=goalSecs();const d=new Date();if(!((days[dayKey(d)]||{}).secs>=g))d.setDate(d.getDate()-1);while((days[dayKey(d)]||{}).secs>=g){n++;d.setDate(d.getDate()-1);}return n;}
+function timingMult(){return Number(roster.settings.timing)||1;}
+
+/* ---------------- app state ---------------- */
+const state={view:'levels',tablesOp:'mul',tablesN:7,cover:false,progOp:'add',pickedKey:null,calMonth:null,calPicked:null};
+const h0=location.hash.replace('#','');
+if(h0==='tables'||h0==='progress'||h0==='setup')state.view=h0;
+let S=null;
+
+function render(){renderTop();const m=$('#main');if(render.last!==state.view)window.scrollTo(0,0);render.last=state.view;
+  if(state.view==='levels')m.innerHTML=viewLevels();
+  else if(state.view==='session')m.innerHTML=viewSession();
+  else if(state.view==='results')m.innerHTML=viewResults();
+  else if(state.view==='tables')m.innerHTML=viewTables();
+  else if(state.view==='progress')m.innerHTML=viewProgress();
+  else if(state.view==='setup')m.innerHTML=viewSetup();
+  renderSyncNote();
+}
+function renderTop(){
+  const s=activeStudent();const inS=state.view==='session';
+  const tab=(id,label)=>`<button class="tab" data-act="nav" data-view="${id}" aria-current="${state.view===id||(id==='levels'&&(state.view==='results'))?'page':'false'}">${label}</button>`;
+  $('#top').innerHTML=`<button class="student-btn" data-act="menu" aria-haspopup="menu" ${inS?'disabled':''}><span class="dot"></span><b>${esc(s.name)}</b><span class="muted">▾</span></button>
+  <nav class="tabs">${tab('levels','Practice')}${tab('tables','Tables')}${tab('progress','Progress')}<button class="tab icon" data-act="nav" data-view="setup" aria-label="Settings" aria-current="${state.view==='setup'?'page':'false'}">⚙</button></nav><div class="menu" id="menu"></div>`;
+  document.body.classList.toggle('in-session',inS);
+  $('#menu').innerHTML=roster.students.map(x=>`<button data-act="pick-student" data-id="${x.id}" aria-current="${x.id===s.id}"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${x.id===s.id?'var(--yellow)':'var(--chalk-3)'}"></span>${esc(x.name)} <span class="muted small">· ${GRADE_NAMES[x.grade]||''}</span></button>`).join('')+`<div class="sep"></div><button data-act="nav" data-view="setup">Manage students…</button>`;
+}
+
+/* ---------------- levels view ---------------- */
+function viewLevels(){
+  const s=activeStudent();const p=getProgress(s.id);
+  const groups={1:[],2:[],3:[]};LEVELS.forEach(l=>groups[l.grade].push(l));
+  let html=`<div class="page"><h1>${esc(s.name)}’s practice</h1><p class="muted">Pick a level. Practice first, then take the timed test.</p>${tonightStrip(p)}`;
+  const order=[s.grade||1,...[1,2,3].filter(g=>g!==(s.grade||1))];
+  order.forEach(g=>{
+    html+=`<h2>${GRADE_NAMES[g]} <small>${GRADE_NOTES[g]}</small></h2><div class="tiles">`;
+    groups[g].forEach(l=>{const st=levelStats(l,p);const b=p.best[l.id];
+      html+=`<button class="tile" data-act="open-level" data-id="${l.id}"><span class="t">${esc(l.title)}</span><span class="s">${st.total} facts${st.mastered?' · '+st.mastered+' mastered':''}</span>
+      <span class="foot"><span class="bar ${st.pct===100?'done':''}"><i style="width:${st.pct}%"></i></span><span class="grade ${b?'':'empty'}">${b?b.pct+'%':'–'}</span></span></button>`;});
+    html+=`</div>`;
+  });
+  return html+`</div>`;
+}
+function openLevel(id){
+  const lv=LEVEL_BY_ID[id];const s=activeStudent();const p=getProgress(s.id);const st=levelStats(lv,p);const b=p.best[id];
+  const weak=weakFacts(p,pool(lv),6);
+  const secs=Math.round(lv.secs*timingMult());
+  $('#sheet').innerHTML=`<button class="x" data-act="close-sheet" aria-label="Close">×</button><h3>${esc(lv.title)}</h3>
+  <p class="muted">${lv.note?esc(lv.note)+' · ':''}${st.total} facts · ${st.mastered} mastered${b?` · best score <span class="grade">${b.pct}%</span> in ${fmtTime(b.secs)}`:''}</p>
+  <div class="bar" style="margin:10px 0 16px;height:8px"><i style="width:${st.pct}%"></i></div>
+  <div class="row"><button class="btn big primary" data-act="start" data-id="${id}" data-mode="practice">Practice</button><button class="btn big yellow" data-act="start" data-id="${id}" data-mode="timed">Timed test</button></div>
+  <p class="small muted" style="margin-top:10px">Practice: ${Math.min(PRACTICE_N,st.total)} problems, no clock, every miss comes back. Timed test: ${lv.count} problems in ${fmtTime(secs)}, scored.</p>
+  ${weak.length?`<p class="small" style="margin-top:14px">Needs work</p><div class="chips">${weak.map(w=>`<span class="chip ${w.st==='trouble'?'red':''}">${esc(factText(w.f))} = <b>${w.f.ans}</b></span>`).join('')}</div>`:''}`;
+  openSheet();
+}
+function openSheet(){$('#sheet').classList.add('open');$('#scrim').classList.add('open');}
+function closeSheet(){$('#sheet').classList.remove('open');$('#scrim').classList.remove('open');}
+function confirmModal(msg,ok,danger){
+  return new Promise(res=>{
+    $('#modal').innerHTML=`<p style="margin:0 0 18px;font-size:1.05rem">${esc(msg)}</p><div class="row" style="justify-content:flex-end"><button class="btn" data-act="modal-no">Cancel</button><button class="btn ${danger?'danger':'primary'}" data-act="modal-yes">${esc(ok)}</button></div>`;
+    $('#modal').classList.add('open');$('#scrim2').classList.add('open');
+    modalRes=res;
+  });
+}
+let modalRes=null;
+function closeModal(v){$('#modal').classList.remove('open');$('#scrim2').classList.remove('open');if(modalRes){const r=modalRes;modalRes=null;r(v);}}
+
+/* ---------------- session ---------------- */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildQueue(facts,n){const q=[];while(q.length<n){const batch=shuffle(facts.slice());if(q.length&&batch.length>1&&batch[0].key===q[q.length-1].key){batch.push(batch.shift());}batch.forEach(f=>{if(q.length<n)q.push(f);});}return q;}
+function pickWeighted(facts,p,exclude,asked){
+  let cands=facts.filter(f=>!exclude.includes(f.key)&&!asked.has(f.key));
+  if(!cands.length)cands=facts.filter(f=>!exclude.includes(f.key));
+  if(!cands.length)cands=facts;
+  const w=cands.map(f=>{const st=stateOf(p.facts[f.key],f.op);return st==='trouble'?5:st==='new'?3:st==='learning'?2:0.6;});
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);
+  for(let i=0;i<cands.length;i++){r-=w[i];if(r<=0)return cands[i];}
+  return cands[cands.length-1];
+}
+function startSession(id,mode){
+  const lv=LEVEL_BY_ID[id];const s=activeStudent();const p=getProgress(s.id);const facts=pool(lv);
+  S={lv,mode,student:s,prog:p,facts,queue:mode==='timed'?buildQueue(facts,lv.count):[],idx:0,N:Math.min(PRACTICE_N,facts.length),asked:0,askedSet:new Set(),answered:0,correct:0,missed:[],pending:[],retry:false,cur:null,input:'',shownAt:0,lock:false,
+    limit:mode==='timed'?Math.round(lv.secs*timingMult()):0,startedAt:Date.now(),timer:null,timedOut:false,last:[]};
+  closeSheet();state.view='session';render();
+  if(mode==='timed'){S.timer=setInterval(tick,200);}
+  nextProblem();
+}
+function tick(){if(!S)return;const el=(Date.now()-S.startedAt)/1000;const rem=S.limit-el;const clock=$('#clock'),bar=$('#tbar');
+  if(clock){clock.textContent=fmtTime(Math.ceil(rem));clock.classList.toggle('low',rem<=15);}
+  if(bar)bar.style.width=Math.max(0,100*rem/S.limit)+'%';
+  if(rem<=0){S.timedOut=true;endSession();}}
+function viewSession(){
+  const lay=roster.settings.layout||'stacked';
+  return `<div class="session"><div class="sbar"><button class="quit" data-act="quit" aria-label="Stop">×</button><span class="title">${esc(S.lv.title)} · ${S.mode==='timed'?'Timed test':'Practice'}</span><span class="count" id="count"></span>${S.mode==='timed'?`<span class="clock" id="clock">${fmtTime(S.limit)}</span>`:''}</div>
+  ${S.mode==='timed'?`<div class="timerbar"><i id="tbar"></i></div>`:''}
+  <div class="sbody"><div class="stage" id="stage"><div id="prob" class="prob ${lay==='line'?'line':'stacked'}"></div><div id="mark"></div></div>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key" data-key="${n}">${n}</button>`).join('')}<button class="key back" data-key="back" aria-label="Backspace">⌫</button><button class="key" data-key="0">0</button><button class="key enter" data-key="enter" aria-label="Enter">↵</button></div></div></div>`;
+}
+function nextProblem(){
+  if(!S||S.ended)return;let f;
+  if(S.mode==='timed'){if(S.idx>=S.queue.length)return endSession();f=S.queue[S.idx];S.retry=false;}
+  else{
+    const dueIdx=S.pending.findIndex(x=>x.due<=S.asked);
+    if(dueIdx>=0){f=S.pending.splice(dueIdx,1)[0].f;S.retry=true;}
+    else if(S.asked>=S.N){if(S.pending.length){f=S.pending.shift().f;S.retry=true;}else return endSession();}
+    else{f=pickWeighted(S.facts,S.prog,S.last,S.askedSet);S.retry=false;}
+  }
+  askFact(f);
+}
+function askFact(f){
+  S.cur=f;S.input='';S.shownAt=performance.now();S.last.push(f.key);if(S.last.length>2)S.last.shift();
+  const el=$('#prob');if(!el)return;
+  const lay=roster.settings.layout||'stacked';
+  if(f.op==='div'||lay==='line'){el.className='prob line';el.innerHTML=`<span>${f.a}</span><span class="op">${OPS[f.op].sym}</span><span>${f.b}</span><span class="op">=</span><span class="ans empty" id="ans"></span>`;}
+  else{el.className='prob stacked';el.innerHTML=`<div class="ln first"><span class="op">${OPS[f.op].sym}</span><span>${f.a}</span></div><div class="ln"><span class="op">${OPS[f.op].sym}</span><span>${f.b}</span></div><div class="rule"></div><div class="ln"><span></span><span class="ans empty" id="ans"></span></div>`;}
+  $('#mark').innerHTML='';const c=$('#count');if(c)c.textContent=S.mode==='timed'?(S.idx+1)+' of '+S.queue.length:(S.retry?'again · ':'')+Math.min(S.asked+(S.retry?0:1),S.N)+' of '+S.N;
+}
+function updateInput(){const a=$('#ans');if(!a)return;a.textContent=S.input;a.classList.toggle('empty',S.input==='');}
+function key(k){
+  if(!S||S.lock)return;
+  if(k==='back'){S.input=S.input.slice(0,-1);updateInput();return;}
+  if(k==='enter'){submit();return;}
+  if(S.input.length>=3)return;
+  if(S.input==='0'&&k==='0')return;
+  S.input+=k;updateInput();
+  if(roster.settings.autoSubmit!==false&&S.input.length>=String(S.cur.ans).length)submit();
+}
+function flash(ok){$('#mark').innerHTML=`<div class="mark ${ok?'ok':'bad'}"><svg viewBox="0 0 100 100">${ok?'<path d="M18 54 L42 76 L84 26"/>':'<path d="M26 26 L74 74"/><path d="M74 26 L26 74"/>'}</svg></div>`;}
+function submit(){
+  if(!S||S.lock||S.input==='')return;
+  const f=S.cur;const ok=parseInt(S.input,10)===f.ans;const ms=performance.now()-S.shownAt;
+  recordAttempt(S.prog,f,ok,ms);S.answered++;
+  $('#ans').textContent=S.input;$('#ans').classList.remove('empty');
+  if(S.mode==='timed'){
+    S.idx++;if(ok)S.correct++;else S.missed.push(f.key);
+    flash(ok);S.lock=true;setTimeout(()=>{if(!S)return;S.lock=false;nextProblem();},ok?200:420);
+  }else{
+    if(!S.retry){S.asked++;S.askedSet.add(f.key);if(ok)S.correct++;else if(!S.missed.includes(f.key))S.missed.push(f.key);}
+    if(ok){flash(true);S.lock=true;setTimeout(()=>{if(!S)return;S.lock=false;nextProblem();},260);}
+    else{
+      flash(false);S.lock=true;
+      $('#ans').style.color='var(--red)';
+      setTimeout(()=>{if(!S)return;$('#mark').innerHTML=`<div class="correction">${esc(factText(f))} = ${f.ans}<small>Now you try it.</small></div>`;},380);
+      if(!S.pending.some(x=>x.f.key===f.key))S.pending.push({f,due:S.asked+3});
+      setTimeout(()=>{if(!S)return;S.lock=false;S.retry=true;askFact(f);$('#ans').style.color='';},1800);
+    }
+  }
+}
+async function quitSession(){
+  if(!S)return;
+  const ok=await confirmModal(S.mode==='timed'?'Stop the test? This one won’t be scored.':'Stop practicing?','Stop',true);
+  if(!ok)return;
+  if(S.mode==='practice'&&S.asked>=5){endSession(true);return;}
+  clearInterval(S.timer);saveProgress(S.student.id);S=null;state.view='levels';render();
+}
+function endSession(partial){
+  if(S.ended)return;S.ended=true;clearInterval(S.timer);S.lock=true;
+  const lv=S.lv,p=S.prog;const total=S.mode==='timed'?S.queue.length:S.asked;const correct=S.correct;
+  const pct=total?Math.round(100*correct/total):0;
+  let secs=Math.round((Date.now()-S.startedAt)/1000);if(S.mode==='timed')secs=Math.min(secs,S.limit);
+  const rec={id:uid(),ts:Date.now(),lv:lv.id,mode:S.mode,total,answered:S.answered,correct,secs,limit:S.limit,pct,missed:[...new Set(S.missed)].slice(0,12),timedOut:!!S.timedOut,partial:!!partial};
+  p.sessions.push(rec);if(p.sessions.length>SESSION_CAP)p.sessions=p.sessions.slice(-SESSION_CAP);
+  let newBest=false;
+  if(S.mode==='timed'){const b=p.best[lv.id];const cand={pct,secs,ts:rec.ts};if(!b||better(cand,b)){p.best[lv.id]=cand;newBest=true;}}
+  saveProgress(S.student.id);
+  S.result={rec,newBest};state.view='results';render();
+}
+function viewResults(){
+  const {rec,newBest}=S.result;const lv=S.lv;const timed=rec.mode==='timed';
+  const missed=rec.missed.map(k=>factFromKey(k)).filter(Boolean);
+  const ppm=rec.secs?Math.round(10*rec.answered/(rec.secs/60))/10:0;
+  let line2=timed?(rec.timedOut?`Time ran out — ${rec.answered} of ${rec.total} answered`:`Finished in ${fmtTime(rec.secs)} of ${fmtTime(rec.limit)}`):`${rec.total} problems in ${fmtTime(rec.secs)}${rec.partial?' (stopped early)':''}`;
+  const html=`<div class="page"><h1>${esc(lv.title)} · ${timed?'Timed test':'Practice'}</h1>
+  <div class="report"><div class="biggrade">${rec.pct}%</div><div class="line1">${rec.correct} of ${rec.total} right${timed?'':' on the first try'}</div><div class="line2">${line2}</div><div class="line3">${ppm} answers per minute${timed&&newBest?' · <span class="best">New best for this level</span>':''}</div></div>
+  ${missed.length?`<h2>Missed <small>study these</small></h2><div class="chips">${missed.map(f=>`<span class="chip red">${esc(factText(f))} = <b>${f.ans}</b></span>`).join('')}</div>`:`<p class="muted">Nothing missed.</p>`}
+  ${tonightStrip(S.prog)}
+  <div class="row" style="margin-top:18px"><button class="btn big primary" data-act="start" data-id="${lv.id}" data-mode="${rec.mode}">${timed?'Take it again':'Practice again'}</button>${timed?'':`<button class="btn big yellow" data-act="start" data-id="${lv.id}" data-mode="timed">Timed test</button>`}</div>
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="nav" data-view="levels">All levels</button><button class="btn" data-act="nav" data-view="progress">Progress</button></div></div>`;
+  return html;
+}
+
+/* ---------------- tables view ---------------- */
+function viewTables(){
+  const op=state.tablesOp;const n=state.tablesN;
+  let html=`<div class="page"><h1>The tables</h1><p class="muted">Study a table, then cover the answers and say each one out loud. Tap a line to check.</p>
+  <div class="row" style="margin:12px 0"><div class="seg">${['add','sub','mul','div'].map(o=>`<button data-act="tables-op" data-op="${o}" aria-pressed="${o===op}">${OPS[o].sym}</button>`).join('')}</div>
+  <button class="btn sm" data-act="cover" aria-pressed="${state.cover}">${state.cover?'Show answers':'Cover answers'}</button></div>`;
+  if(op==='add'||op==='mul'){
+    html+=`<div class="grid" style="grid-template-columns:repeat(14,1fr)">`;
+    html+=`<div class="c corner"></div>`;for(let j=0;j<=12;j++)html+=`<button class="c hd" data-act="tables-n" data-n="${j}" aria-pressed="${j===n}">${j}</button>`;
+    for(let i=0;i<=12;i++){html+=`<button class="c hd" data-act="tables-n" data-n="${i}" aria-pressed="${i===n}">${i}</button>`;for(let j=0;j<=12;j++){const v=op==='add'?i+j:i*j;html+=`<div class="c ${i===n||j===n?'hl':''}">${v}</div>`;}}
+    html+=`</div>`;
+  }else{
+    const lo=op==='div'?1:0;html+=`<div class="numpick">`;for(let k=lo;k<=12;k++)html+=`<button data-act="tables-n" data-n="${k}" aria-pressed="${k===n}">${k}</button>`;html+=`</div>`;
+  }
+  const title=op==='add'?`Adding ${n}`:op==='sub'?`Taking away ${n}`:op==='mul'?`${n} times table`:`Dividing by ${n}`;
+  html+=`<h2>${title}</h2><div class="facts ${state.cover?'cover':''}">`;
+  for(let k=0;k<=12;k++){let q,a;
+    if(op==='add'){q=`${n} + ${k}`;a=n+k;}else if(op==='sub'){q=`${n+k} − ${n}`;a=k;}else if(op==='mul'){q=`${n} × ${k}`;a=n*k;}else{q=`${n*k} ÷ ${n}`;a=k;}
+    html+=`<div class="f" data-act="reveal"><span class="q">${q}</span><span>=</span><span class="a">${a}</span></div>`;}
+  html+=`</div></div>`;
+  return html;
+}
+
+/* ---------------- progress view ---------------- */
+function viewProgress(){
+  const s=activeStudent();const p=getProgress(s.id);
+  const now=Date.now(),week=now-7*864e5;
+  const sess=p.sessions||[];const recent=sess.filter(x=>x.ts>=week);
+  const mins=Math.round(recent.reduce((a,x)=>a+(x.secs||0),0)/60);
+  let mastered=0,seen=0;Object.values(ALL).forEach(arr=>arr.forEach(f=>{const r=p.facts[f.key];if(r&&r.n)seen++;if(stateOf(r,f.op)==='mastered')mastered++;}));
+  const days=byDay(p);const g=goalSecs();const streak=goalStreak(days);
+  let nights=0;for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);if((days[dayKey(d)]||{}).secs>=g)nights++;}
+  let html=`<div class="page"><h1>${esc(s.name)}’s progress</h1>
+  <div class="stats"><div class="stat"><div class="v">${mastered}</div><div class="k">facts mastered of ${TOTAL_FACTS}</div></div><div class="stat"><div class="v">${nights}<span class="muted" style="font-size:1rem"> of 7</span></div><div class="k">nights this week</div></div><div class="stat"><div class="v">${mins}</div><div class="k">minutes this week</div></div><div class="stat"><div class="v">${streak}</div><div class="k">nights in a row</div></div></div>`;
+  html+=tonightStrip(p);
+  if(!sess.length)html+=`<div class="empty" style="margin-top:20px">No sessions yet. Start with a practice round on the Practice tab.</div>`;
+  html+=calendarSection(days,g);
+  /* mastery grid */
+  const op=state.progOp;const o=OPS[op];
+  html+=`<h2>Mastery by table</h2><div class="row" style="margin-bottom:10px"><div class="seg">${['add','sub','mul','div'].map(x=>`<button data-act="prog-op" data-op="${x}" aria-pressed="${x===op}">${OPS[x].sym}</button>`).join('')}</div><span class="small muted">rows: ${o.rowLabel} · columns: ${o.colLabel}</span></div>`;
+  const lo=op==='div'?1:0;const cols=12-lo+2;
+  html+=`<div class="grid" style="grid-template-columns:repeat(${cols},1fr)"><div class="c corner"></div>`;
+  for(let j=lo;j<=12;j++)html+=`<div class="c hd" style="cursor:default">${j}</div>`;
+  for(let i=0;i<=12;i++){html+=`<div class="c hd" style="cursor:default">${i}</div>`;for(let j=lo;j<=12;j++){const f=makeFact(op,i,j);const st=stateOf(p.facts[f.key],op);const cls=st==='mastered'?'m':st==='trouble'?'x':st==='learning'?'l':'n';
+    const label=op==='add'?f.ans:op==='sub'?f.a:op==='mul'?f.ans:f.a;
+    html+=`<button class="c cell ${cls}" data-act="pick-fact" data-key="${f.key}" aria-pressed="${state.pickedKey===f.key}" aria-label="${esc(factText(f))} equals ${f.ans}">${label}</button>`;}}
+  html+=`</div><div class="legend"><span><i style="background:var(--chalk)"></i>mastered</span><span><i style="background:var(--yellow-dim);box-shadow:inset 0 0 0 1.5px var(--yellow)"></i>learning</span><span><i style="background:var(--red-dim);box-shadow:inset 0 0 0 1.5px var(--red)"></i>missed lately</span><span><i style="box-shadow:inset 0 0 0 1px var(--chalk-3)"></i>not tried</span></div><div class="detail" id="detail">${factDetail(p,state.pickedKey)}</div>`;
+  /* weak facts */
+  const weak=weakFacts(p,[].concat(...Object.values(ALL)),12);
+  html+=`<h2>Needs work</h2>`;
+  html+=weak.length?`<div class="chips">${weak.map(w=>`<span class="chip ${w.st==='trouble'?'red':''}">${esc(factText(w.f))} = <b>${w.f.ans}</b></span>`).join('')}</div>`:`<p class="muted">${seen?'Nothing flagged right now.':'Nothing yet.'}</p>`;
+  /* charts */
+  const last=sess.slice(-20);
+  if(last.length>=2){
+    html+=`<h2>Accuracy <small>last ${last.length} sessions</small></h2>`+chart(last.map(x=>x.pct),0,100,'%','l1','p1');
+    html+=`<h2>Speed <small>answers per minute</small></h2>`+chart(last.map(x=>x.secs?Math.round(10*x.answered/(x.secs/60))/10:0),0,null,'','l2','p2');
+  }
+  /* test log */
+  const tests=sess.filter(x=>x.mode==='timed').slice(-15).reverse();
+  html+=`<h2>Timed tests</h2>`;
+  if(tests.length){html+=`<table class="log"><tr><th>Date</th><th>Level</th><th>Right</th><th>Time</th><th>Score</th></tr>`;
+    tests.forEach(t=>{const lv=LEVEL_BY_ID[t.lv];html+=`<tr><td>${fmtDate(t.ts)}</td><td>${esc(lv?lv.title:t.lv)}</td><td>${t.correct} of ${t.total}</td><td>${t.timedOut?'ran out':fmtTime(t.secs)}</td><td class="g">${t.pct}%</td></tr>`;});html+=`</table>`;}
+  else html+=`<p class="muted">No timed tests yet.</p>`;
+  /* best by level */
+  const bests=Object.keys(p.best);
+  if(bests.length){html+=`<h2>Best scores</h2><div class="chips">${LEVELS.filter(l=>p.best[l.id]).map(l=>{const b=p.best[l.id];return `<span class="chip">${esc(l.title)} <span class="grade" style="margin-left:4px">${b.pct}%</span></span>`;}).join('')}</div>`;}
+  return html+`</div>`;
+}
+function tonightStrip(p){
+  const days=byDay(p);const today=days[dayKey(Date.now())]||{secs:0,list:[]};const g=goalSecs();const done=today.secs>=g;
+  const pct=Math.min(100,Math.round(100*today.secs/g));const mins=Math.round(today.secs/60);const n=today.list.length;
+  return `<div class="tonight ${done?'done':''}"><div class="lbl"><b>${done?'Done for tonight':'Tonight'}</b> · ${mins} of ${g/60} minutes${n?' · '+n+(n===1?' session':' sessions'):''}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+}
+function calendarSection(days,g){
+  const now=new Date();const base=state.calMonth?new Date(state.calMonth):new Date(now.getFullYear(),now.getMonth(),1);
+  const y=base.getFullYear(),mo=base.getMonth();const first=new Date(y,mo,1);const start=first.getDay();const dim=new Date(y,mo+1,0).getDate();
+  const title=first.toLocaleDateString(undefined,{month:'long',year:'numeric'});const todayK=dayKey(now);
+  let met=0,tried=0;
+  let cells='';for(let i=0;i<start;i++)cells+=`<div></div>`;
+  for(let d=1;d<=dim;d++){const k=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');const rec=days[k];const secs=rec?rec.secs:0;const future=k>todayK;
+    if(secs>0)tried++;if(secs>=g)met++;
+    const cls=(secs>=g?'goal':secs>0?'some':'')+(k===todayK?' today':'')+(future?' future':'');
+    cells+=`<button class="d ${cls}" data-act="cal-pick" data-k="${k}" aria-pressed="${state.calPicked===k}" ${future?'disabled':''}><span class="n">${d}</span><span class="m">${secs?Math.round(secs/60)+'m':''}</span></button>`;}
+  return `<h2>Calendar <small>${met} night${met===1?'':'s'} at goal this month · ${g/60} minutes a night</small></h2>
+  <div class="calhead"><button data-act="cal-prev" aria-label="Previous month">‹</button><b>${title}</b><button data-act="cal-next" aria-label="Next month">›</button></div>
+  <div class="cal">${['S','M','T','W','T','F','S'].map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
+  <div class="legend"><span><i style="background:var(--chalk)"></i>goal met</span><span><i style="background:var(--yellow-dim);box-shadow:inset 0 0 0 1.5px var(--yellow)"></i>practiced, under goal</span><span><i style="box-shadow:inset 0 0 0 1.5px var(--red)"></i>today</span></div>
+  <div class="detail" id="caldetail">${calDetail(days,state.calPicked)}</div>`;
+}
+function calDetail(days,k){
+  if(!k)return 'Tap a day to see what was done.';
+  const rec=days[k];const d=new Date(k+'T12:00:00');const label=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  if(!rec)return label+' — no practice.';
+  const items=rec.list.map(s=>{const lv=LEVEL_BY_ID[s.lv];return (s.mode==='timed'?'Test: ':'Practice: ')+(lv?lv.title:s.lv)+' '+s.pct+'%';}).join(' · ');
+  return label+' — '+Math.round(rec.secs/60)+' min · '+items;
+}
+function factDetail(p,key){
+  if(!key)return 'Tap a square to see how that fact is going.';
+  const f=factFromKey(key);const r=p.facts[key];
+  if(!r||!r.n)return `${factText(f)} = ${f.ans} — not tried yet.`;
+  const times=(r.t||[]).slice(-3).map(t=>(t/10).toFixed(1)+'s').join(', ');
+  const st=stateOf(r,f.op);
+  return `${factText(f)} = ${f.ans} — ${r.c} right of ${r.n} ${r.n===1?'try':'tries'} · last times ${times} · ${st==='mastered'?'mastered':st==='trouble'?'missed lately':'still learning'}`;
+}
+function chart(vals,min,max,unit,lc,pc){
+  const W=640,H=180,L=36,R=12,T=14,B=26;const n=vals.length;
+  const mx=max==null?Math.max(5,Math.ceil(Math.max(...vals)*1.15)):max;
+  const x=i=>L+(n>1?i*(W-L-R)/(n-1):0);const y=v=>T+(H-T-B)*(1-(v-min)/(mx-min));
+  const pts=vals.map((v,i)=>x(i)+','+y(v)).join(' ');
+  let g='';[0,0.5,1].forEach(k=>{const v=min+(mx-min)*k;g+=`<line class="axis" x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${Math.round(v)}${unit}</text>`;});
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="trend chart">${g}<polyline class="${lc}" points="${pts}"/>${vals.map((v,i)=>`<circle class="${pc}" cx="${x(i)}" cy="${y(v)}" r="3.5"/>`).join('')}<text x="${L}" y="${H-6}">oldest</text><text x="${W-R}" y="${H-6}" text-anchor="end">latest</text></svg>`;
+}
+
+/* ---------------- setup view ---------------- */
+function viewSetup(){
+  const st=roster.settings;const s=activeStudent();
+  const sw=(k,on)=>`<button class="switch" role="switch" aria-checked="${on}" data-act="toggle" data-k="${k}"></button>`;
+  let html=`<div class="page"><h1>Settings</h1>
+  <h2>Students</h2>`;
+  roster.students.forEach(x=>{html+=`<div class="srow"><input type="text" value="${esc(x.name)}" data-act="rename" data-id="${x.id}" aria-label="Name" maxlength="24"><select data-act="set-grade" data-id="${x.id}" aria-label="Grade"><option value="1" ${x.grade==1?'selected':''}>First grade</option><option value="2" ${x.grade==2?'selected':''}>Second grade</option><option value="3" ${x.grade==3?'selected':''}>Third grade</option></select><button class="btn sm" data-act="remove-student" data-id="${x.id}" ${roster.students.length<=1?'disabled':''}>Remove</button></div>`;});
+  html+=`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="add-student">Add a student</button></div>
+  <h2>Answering</h2>
+  <div class="field"><div class="lab">Enter answers automatically<small>Moves on as soon as the right number of digits is typed. Turn off to require ↵.</small></div>${sw('autoSubmit',st.autoSubmit!==false)}</div>
+  <div class="field"><div class="lab">Problem layout<small>Stacked like a worksheet, or in a line like a flash card. Division is always in a line.</small></div><div class="seg"><button data-act="set" data-k="layout" data-v="stacked" aria-pressed="${st.layout!=='line'}">Stacked</button><button data-act="set" data-k="layout" data-v="line" aria-pressed="${st.layout==='line'}">In a line</button></div></div>
+  <h2>Every night</h2>
+  <div class="field"><div class="lab">Nightly goal<small>Minutes of practice that count as a night done. The calendar, streak and “Tonight” bar use this.</small></div><div class="seg"><button data-act="set" data-k="goal" data-v="5" aria-pressed="${st.goal==5}">5 min</button><button data-act="set" data-k="goal" data-v="10" aria-pressed="${!st.goal||st.goal==10}">10 min</button><button data-act="set" data-k="goal" data-v="15" aria-pressed="${st.goal==15}">15 min</button><button data-act="set" data-k="goal" data-v="20" aria-pressed="${st.goal==20}">20 min</button></div></div>
+  <h2>Scoring</h2>
+  <div class="field"><div class="lab">Timed test length<small>Standard is about 4–6 seconds per problem depending on the level.</small></div><div class="seg"><button data-act="set" data-k="timing" data-v="0.75" aria-pressed="${st.timing==0.75}">Strict</button><button data-act="set" data-k="timing" data-v="1" aria-pressed="${!st.timing||st.timing==1}">Standard</button><button data-act="set" data-k="timing" data-v="1.5" aria-pressed="${st.timing==1.5}">Relaxed</button></div></div>
+  <div class="field"><div class="lab">Counts as mastered when answered in<small>Three right in a row at this speed. Times tables get one extra second.</small></div><div class="seg"><button data-act="set" data-k="target" data-v="3" aria-pressed="${(st.target||3)==3}">3 s</button><button data-act="set" data-k="target" data-v="4" aria-pressed="${st.target==4}">4 s</button><button data-act="set" data-k="target" data-v="5" aria-pressed="${st.target==5}">5 s</button></div></div>
+  <h2>Data</h2>
+  <p class="sync" id="syncnote"></p>
+  <div class="row" style="margin-top:10px"><button class="btn sm danger" data-act="reset">Erase ${esc(s.name)}’s progress</button></div>
+  <h2>How this works</h2>
+  <p class="small muted">Practice shows one fact at a time and brings back every miss until it sticks. Timed tests are scored as a percentage, like a worksheet. A fact counts as mastered after three quick, correct answers in a row, and it keeps getting checked occasionally so it stays mastered. Short daily sessions beat long ones.</p>
+  </div>`;
+  return html;
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click',async e=>{
+  const el=e.target.closest('[data-act]');
+  if(!el){if(!e.target.closest('#menu'))$('#menu').classList.remove('open');return;}
+  const act=el.dataset.act;
+  if(act!=='menu'&&!el.closest('#menu'))$('#menu').classList.remove('open');
+  if(act==='nav'){if(S&&state.view==='session')return;S=null;$('#menu').classList.remove('open');closeSheet();state.view=el.dataset.view;render();}
+  else if(act==='menu'){$('#menu').classList.toggle('open');}
+  else if(act==='pick-student'){device.activeId=el.dataset.id;saveJSON(LS.device,device);state.pickedKey=null;$('#menu').classList.remove('open');if(state.view==='results'){S=null;state.view='levels';}render();}
+  else if(act==='open-level')openLevel(el.dataset.id);
+  else if(act==='close-sheet')closeSheet();
+  else if(act==='start'){S=null;startSession(el.dataset.id,el.dataset.mode);}
+  else if(act==='quit')quitSession();
+  else if(act==='modal-yes')closeModal(true);
+  else if(act==='modal-no')closeModal(false);
+  else if(act==='tables-op'){state.tablesOp=el.dataset.op;if(state.tablesOp==='div'&&state.tablesN===0)state.tablesN=1;render();}
+  else if(act==='tables-n'){state.tablesN=Number(el.dataset.n);render();}
+  else if(act==='cover'){state.cover=!state.cover;render();}
+  else if(act==='reveal'){el.classList.toggle('show');}
+  else if(act==='prog-op'){state.progOp=el.dataset.op;state.pickedKey=null;render();}
+  else if(act==='pick-fact'){state.pickedKey=el.dataset.key;document.querySelectorAll('.cell[aria-pressed="true"]').forEach(c=>c.setAttribute('aria-pressed','false'));el.setAttribute('aria-pressed','true');$('#detail').textContent=factDetail(getProgress(activeStudent().id),state.pickedKey);}
+  else if(act==='cal-prev'||act==='cal-next'){const now=new Date();const b=state.calMonth?new Date(state.calMonth):new Date(now.getFullYear(),now.getMonth(),1);b.setMonth(b.getMonth()+(act==='cal-next'?1:-1));state.calMonth=b.getTime();state.calPicked=null;render();}
+  else if(act==='cal-pick'){state.calPicked=el.dataset.k;document.querySelectorAll('.cal .d[aria-pressed="true"]').forEach(c=>c.setAttribute('aria-pressed','false'));el.setAttribute('aria-pressed','true');$('#caldetail').textContent=calDetail(byDay(getProgress(activeStudent().id)),state.calPicked);}
+  else if(act==='toggle'){const k=el.dataset.k;roster.settings[k]=!(el.getAttribute('aria-checked')==='true');saveRoster();render();}
+  else if(act==='set'){const k=el.dataset.k;let v=el.dataset.v;if(k!=='layout')v=Number(v);roster.settings[k]=v;saveRoster();render();}
+  else if(act==='add-student'){roster.students.push({id:'s_'+uid(),name:'New student',grade:1});saveRoster();render();const inputs=document.querySelectorAll('input[data-act="rename"]');const last=inputs[inputs.length-1];if(last){last.focus();last.select();}}
+  else if(act==='remove-student'){const x=roster.students.find(y=>y.id===el.dataset.id);if(!x)return;const ok=await confirmModal(`Remove ${x.name}? Their progress stays saved in case you add them back with the same name.`,'Remove',true);if(!ok)return;roster.students=roster.students.filter(y=>y.id!==x.id);if(device.activeId===x.id){device.activeId=roster.students[0].id;saveJSON(LS.device,device);}saveRoster();render();}
+  else if(act==='reset'){const s=activeStudent();const ok=await confirmModal(`Erase all of ${s.name}’s progress? This can’t be undone.`,'Erase',true);if(!ok)return;progress[s.id]=blankProgress();saveProgress(s.id);render();}
+});
+document.addEventListener('input',e=>{const el=e.target.closest('[data-act="rename"]');if(!el)return;const x=roster.students.find(y=>y.id===el.dataset.id);if(x){x.name=el.value.trim()||'Student';}});
+document.addEventListener('change',e=>{
+  const r=e.target.closest('[data-act="rename"]');if(r){saveRoster();renderTop();return;}
+  const g=e.target.closest('[data-act="set-grade"]');if(g){const x=roster.students.find(y=>y.id===g.dataset.id);if(x){x.grade=Number(g.value);saveRoster();renderTop();}}
+});
+document.addEventListener('pointerdown',e=>{const k=e.target.closest('.key');if(!k)return;e.preventDefault();k.classList.add('down');key(k.dataset.key);});
+document.addEventListener('pointerup',e=>{document.querySelectorAll('.key.down').forEach(k=>k.classList.remove('down'));});
+document.addEventListener('pointercancel',()=>{document.querySelectorAll('.key.down').forEach(k=>k.classList.remove('down'));});
+document.addEventListener('keydown',e=>{
+  if($('#modal').classList.contains('open')){if(e.key==='Escape')closeModal(false);return;}
+  if(e.key==='Escape'){closeSheet();$('#menu').classList.remove('open');return;}
+  if(!S||state.view!=='session')return;
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'))return;
+  if(/^[0-9]$/.test(e.key)){key(e.key);e.preventDefault();}
+  else if(e.key==='Backspace'){key('back');e.preventDefault();}
+  else if(e.key==='Enter'){key('enter');e.preventDefault();}
+});
+$('#scrim').addEventListener('click',closeSheet);
+$('#scrim2').addEventListener('click',()=>closeModal(false));
+
+render();
+initDb();
+})();
+</script>
+</body>
+</html>
