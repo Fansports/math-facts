@@ -249,6 +249,34 @@ select{appearance:auto}
 .switch[aria-checked="true"]{background:var(--yellow)}
 .switch[aria-checked="true"]::after{left:25px}
 .sync{font-size:.9rem;color:var(--chalk-2)}
+
+/* lessons */
+.lstage{flex:1;min-height:0;overflow:auto;position:relative;padding:14px 16px 24px;-webkit-overflow-scrolling:touch}
+.viz{display:block;width:100%;height:auto;margin:10px 0}
+.lq{font-size:1.15rem;line-height:1.35;margin:0 0 6px}
+.leqs{margin-top:8px}
+.leq{font-size:clamp(26px,5vw,38px);font-variant-numeric:tabular-nums;line-height:1.3;margin:6px 0;display:flex;flex-wrap:wrap;align-items:center;gap:.15em}
+.leq.static{color:var(--chalk);margin:4px 0 10px}
+.blank{font:inherit;color:var(--yellow);background:var(--chalk-4);border:0;border-bottom:3px solid var(--chalk-3);border-radius:6px 6px 0 0;min-width:2.2em;height:1.35em;padding:0 .25em;text-align:center;cursor:pointer}
+.blank.active{border-bottom-color:var(--yellow);background:var(--yellow-dim)}
+.blank.active.empty::after{content:"";display:inline-block;width:.5em;height:.08em;background:var(--yellow);vertical-align:-.1em;animation:blink 1s steps(2) infinite}
+.blank.good{color:var(--chalk);border-bottom-color:var(--chalk)}
+.blank.bad{color:var(--red);border-bottom-color:var(--red);text-decoration:line-through}
+.fix{color:var(--red);font-family:var(--hand);font-size:.95em;margin-left:.2em}
+.opts{display:flex;flex-direction:column;gap:10px;margin-top:10px;max-width:560px}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;font-size:1.2rem;font-variant-numeric:tabular-nums;background:var(--chalk-4);border:1.5px solid transparent;border-radius:12px;padding:12px 14px;cursor:pointer;touch-action:manipulation;min-height:54px}
+.opt .ltr{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--chalk-3);display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;flex:none}
+.opt.picked{border-color:var(--chalk)}
+.opt.good{background:var(--chalk);color:var(--ink)} .opt.good .ltr{border-color:var(--ink)}
+.opt.bad{background:var(--red-dim);border-color:var(--red)}
+.opt[disabled]{cursor:default}
+.lfb{margin-top:14px}
+.lhint{font-family:var(--hand);color:var(--red);font-size:1.4rem;line-height:1.2;margin:4px 0 12px}
+.lmiss{border:1.5px solid var(--chalk-3);border-radius:12px;padding:10px 14px;margin:8px 0}
+.lmiss .lhint{margin:6px 0 0;font-size:1.2rem}
+.lsample{border:1.5px dashed var(--chalk-3);border-radius:12px;padding:10px 12px;margin-top:10px}
+.lsample .viz{max-height:120px}
+.bardiag{margin:8px 0}.bartotal{text-align:center;color:var(--yellow);font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -346,8 +374,8 @@ let device=loadJSON(LS.device)||{};
 const progress={};
 function getProgress(id){if(!progress[id]){const p=loadJSON(LS.progress(id))||blankProgress();if(!p.facts)p.facts={};if(!p.sessions)p.sessions=[];if(!p.best)p.best={};progress[id]=p;}return progress[id];}
 function activeStudent(){let s=roster.students.find(x=>x.id===device.activeId);if(!s){s=roster.students[0];device.activeId=s.id;saveJSON(LS.device,device);}return s;}
-function saveRoster(){roster.updatedAt=Date.now();saveJSON(LS.roster,roster);queueWrite('roster/main',roster);}
-function saveProgress(id){const p=getProgress(id);p.updatedAt=Date.now();saveJSON(LS.progress(id),p);queueWrite('progress/'+id,p);}
+function saveRoster(){roster.updatedAt=Date.now();saveJSON(LS.roster,roster);queueWrite('roster/main',roster);if(window.MF_ONSAVE)window.MF_ONSAVE('roster',null,roster);}
+function saveProgress(id){const p=getProgress(id);p.updatedAt=Date.now();saveJSON(LS.progress(id),p);queueWrite('progress/'+id,p);if(window.MF_ONSAVE)window.MF_ONSAVE('progress',id,p);}
 
 /* db sync (shared across devices when the page is opened signed in) */
 let db=null,syncState='local';const writeChain={};
@@ -421,7 +449,7 @@ function timingMult(){return Number(roster.settings.timing)||1;}
 /* ---------------- app state ---------------- */
 const state={view:'levels',tablesOp:'mul',tablesN:7,cover:false,progOp:'add',pickedKey:null,calMonth:null,calPicked:null};
 const h0=location.hash.replace('#','');
-if(h0==='tables'||h0==='progress'||h0==='setup')state.view=h0;
+if(h0==='tables'||h0==='progress'||h0==='setup'||h0==='lessons')state.view=h0;
 let S=null;
 
 function render(){renderTop();const m=$('#main');if(render.last!==state.view)window.scrollTo(0,0);render.last=state.view;
@@ -431,13 +459,14 @@ function render(){renderTop();const m=$('#main');if(render.last!==state.view)win
   else if(state.view==='tables')m.innerHTML=viewTables();
   else if(state.view==='progress')m.innerHTML=viewProgress();
   else if(state.view==='setup')m.innerHTML=viewSetup();
+  else if(window.MF_VIEWS&&window.MF_VIEWS[state.view])m.innerHTML=window.MF_VIEWS[state.view]();
   renderSyncNote();
 }
 function renderTop(){
-  const s=activeStudent();const inS=state.view==='session';
+  const s=activeStudent();const inS=state.view==='session'||state.view==='lsession';
   const tab=(id,label)=>`<button class="tab" data-act="nav" data-view="${id}" aria-current="${state.view===id||(id==='levels'&&(state.view==='results'))?'page':'false'}">${label}</button>`;
   $('#top').innerHTML=`<button class="student-btn" data-act="menu" aria-haspopup="menu" ${inS?'disabled':''}><span class="dot"></span><b>${esc(s.name)}</b><span class="muted">▾</span></button>
-  <nav class="tabs">${tab('levels','Practice')}${tab('tables','Tables')}${tab('progress','Progress')}<button class="tab icon" data-act="nav" data-view="setup" aria-label="Settings" aria-current="${state.view==='setup'?'page':'false'}">⚙</button></nav><div class="menu" id="menu"></div>`;
+  <nav class="tabs">${tab('levels','Practice')}${tab('lessons','Lessons')}${tab('tables','Tables')}${tab('progress','Progress')}<button class="tab icon" data-act="nav" data-view="setup" aria-label="Settings" aria-current="${state.view==='setup'?'page':'false'}">⚙</button></nav><div class="menu" id="menu"></div>`;
   document.body.classList.toggle('in-session',inS);
   $('#menu').innerHTML=roster.students.map(x=>`<button data-act="pick-student" data-id="${x.id}" aria-current="${x.id===s.id}"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${x.id===s.id?'var(--yellow)':'var(--chalk-3)'}"></span>${esc(x.name)} <span class="muted small">· ${GRADE_NAMES[x.grade]||''}</span></button>`).join('')+`<div class="sep"></div><button data-act="nav" data-view="setup">Manage students…</button>`;
 }
@@ -661,6 +690,7 @@ function viewProgress(){
   /* best by level */
   const bests=Object.keys(p.best);
   if(bests.length){html+=`<h2>Best scores</h2><div class="chips">${LEVELS.filter(l=>p.best[l.id]).map(l=>{const b=p.best[l.id];return `<span class="chip">${esc(l.title)} <span class="grade" style="margin-left:4px">${b.pct}%</span></span>`;}).join('')}</div>`;}
+  html+=window.MF_PROGRESS_EXTRA?window.MF_PROGRESS_EXTRA(p):'';
   return html+`</div>`;
 }
 function tonightStrip(p){
@@ -688,7 +718,7 @@ function calDetail(days,k){
   if(!k)return 'Tap a day to see what was done.';
   const rec=days[k];const d=new Date(k+'T12:00:00');const label=d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   if(!rec)return label+' — no practice.';
-  const items=rec.list.map(s=>{const lv=LEVEL_BY_ID[s.lv];return (s.mode==='timed'?'Test: ':'Practice: ')+(lv?lv.title:s.lv)+' '+s.pct+'%';}).join(' · ');
+  const items=rec.list.map(s=>{const lv=LEVEL_BY_ID[s.lv];const t=lv?lv.title:((window.MF_TITLES&&window.MF_TITLES[s.lv])||s.lv);return (s.mode==='timed'?'Test: ':s.mode==='lesson'?'Lesson: ':'Practice: ')+t+' '+s.pct+'%';}).join(' · ');
   return label+' — '+Math.round(rec.secs/60)+' min · '+items;
 }
 function factDetail(p,key){
@@ -726,6 +756,7 @@ function viewSetup(){
   <div class="field"><div class="lab">Counts as mastered when answered in<small>Three right in a row at this speed. Times tables get one extra second.</small></div><div class="seg"><button data-act="set" data-k="target" data-v="3" aria-pressed="${(st.target||3)==3}">3 s</button><button data-act="set" data-k="target" data-v="4" aria-pressed="${st.target==4}">4 s</button><button data-act="set" data-k="target" data-v="5" aria-pressed="${st.target==5}">5 s</button></div></div>
   <h2>Data</h2>
   <p class="sync" id="syncnote"></p>
+  ${window.MF_SETUP_EXTRA?window.MF_SETUP_EXTRA():''}
   <div class="row" style="margin-top:10px"><button class="btn sm danger" data-act="reset">Erase ${esc(s.name)}’s progress</button></div>
   <h2>How this works</h2>
   <p class="small muted">Practice shows one fact at a time and brings back every miss until it sticks. Timed tests are scored as a percentage, like a worksheet. A fact counts as mastered after three quick, correct answers in a row, and it keeps getting checked occasionally so it stays mastered. Short daily sessions beat long ones.</p>
@@ -782,8 +813,276 @@ document.addEventListener('keydown',e=>{
 $('#scrim').addEventListener('click',closeSheet);
 $('#scrim2').addEventListener('click',()=>closeModal(false));
 
+window.MF={get state(){return state;},get roster(){return roster;},setRoster(r){roster=r;saveJSON(LS.roster,roster);},render,renderTop,getProgress,activeStudent,saveProgress,mergeProgress,openSheet,closeSheet,confirmModal,esc,uid,fmtTime,tonightStrip,saveJSON,loadJSON,LS,GRADE_NAMES,SESSION_CAP,better};
 render();
 initDb();
+})();
+</script>
+<script>
+(function(){
+'use strict';
+const M=window.MF; if(!M) return;
+const esc=M.esc; const $=s=>document.querySelector(s);
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const B=ans=>({b:ans});
+const NAMES=['Mia','Jack','Ava','Leo','Zoe','Sam','Ella','Max','Ruby','Owen'];
+const THINGS=[['apples','bags'],['cookies','plates'],['stickers','sheets'],['marbles','jars'],['crayons','boxes'],['books','shelves'],['flowers','vases'],['pencils','cups']];
+
+/* ---------------- visuals (inline SVG, chalk palette) ---------------- */
+const C={chalk:'var(--chalk)',dim:'var(--chalk-3)',yel:'var(--yellow)',red:'var(--red)'};
+function svg(w,h,body,maxw){return `<svg class="viz" viewBox="0 0 ${w} ${h}" style="max-width:${maxw||Math.min(w*1.5,440)}px">${body}</svg>`;}
+function vArray(rows,cols,split,labels){const s=20,g=4;const W=cols*(s+g)+g+(labels?28:0),H=rows*(s+g)+g+(labels?24:0);const ox=labels?28:0,oy=labels?24:0;let b='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)b+=`<rect x="${ox+g+c*(s+g)}" y="${oy+g+r*(s+g)}" width="${s}" height="${s}" rx="3" fill="${split&&c>=split?C.yel:C.chalk}" opacity=".9"/>`;
+  if(split){const x=ox+g/2+split*(s+g);b+=`<line x1="${x}" y1="${oy}" x2="${x}" y2="${H}" stroke="${C.red}" stroke-width="3" stroke-dasharray="6 4"/>`;}
+  if(labels){b+=`<text x="${ox+(cols*(s+g))/2+g}" y="16" fill="${C.dim}" font-size="14" text-anchor="middle">${cols} in each row</text><text x="12" y="${oy+(rows*(s+g))/2+g+5}" fill="${C.dim}" font-size="14" text-anchor="middle" transform="rotate(-90 12 ${oy+(rows*(s+g))/2+g})">${rows} rows</text>`;}
+  return svg(W,H,b);}
+function vGroups(n,each){const cw=70,ch=58;let b='';for(let g=0;g<n;g++){const x=g*(cw+8)+4;b+=`<rect x="${x}" y="4" width="${cw}" height="${ch}" rx="14" fill="none" stroke="${C.dim}" stroke-width="2"/>`;for(let i=0;i<each;i++){const px=x+12+(i%4)*15,py=18+Math.floor(i/4)*16;b+=`<circle cx="${px}" cy="${py}" r="5.5" fill="${C.chalk}"/>`;}}return svg(n*(cw+8)+4,ch+8,b);}
+function vLine(hops,size,max,start){start=start||0;max=max||start+hops*size+2;const W=560,pad=26,u=(W-2*pad)/max;let b=`<line x1="${pad}" y1="60" x2="${W-pad}" y2="60" stroke="${C.chalk}" stroke-width="2"/>`;
+  for(let i=0;i<=max;i++){const x=pad+i*u;b+=`<line x1="${x}" y1="55" x2="${x}" y2="65" stroke="${C.chalk}" stroke-width="1.5"/>`;if(max<=20||i%5===0)b+=`<text x="${x}" y="84" fill="${C.dim}" font-size="13" text-anchor="middle">${i}</text>`;}
+  for(let h=0;h<hops;h++){const x1=pad+(start+h*size)*u,x2=pad+(start+(h+1)*size)*u;b+=`<path d="M${x1} 56 Q ${(x1+x2)/2} ${8} ${x2} 56" fill="none" stroke="${C.yel}" stroke-width="2.5"/><text x="${(x1+x2)/2}" y="30" fill="${C.yel}" font-size="13" text-anchor="middle">+${size}</text>`;}
+  return svg(W,92,b,560);}
+function vOpenLine(start,hops){const W=560,pad=40;let x=pad;const step=(W-2*pad)/hops.length;let b=`<line x1="${pad-20}" y1="60" x2="${W-pad+20}" y2="60" stroke="${C.chalk}" stroke-width="2"/><text x="${pad}" y="84" fill="${C.chalk}" font-size="15" text-anchor="middle">${start}</text>`;
+  let v=start;hops.forEach(h=>{const x2=x+step;v+=h;b+=`<path d="M${x} 56 Q ${(x+x2)/2} 8 ${x2} 56" fill="none" stroke="${C.yel}" stroke-width="2.5"/><text x="${(x+x2)/2}" y="30" fill="${C.yel}" font-size="14" text-anchor="middle">${h>0?'+':''}${h}</text><text x="${x2}" y="84" fill="${C.chalk}" font-size="15" text-anchor="middle">?</text>`;x=x2;});
+  return svg(W,92,b,560);}
+function vBar(parts,total){const W=460,h=44;const n=parts.length,w=(W-20)/n;let b='';parts.forEach((p,i)=>{b+=`<rect x="${10+i*w}" y="30" width="${w}" height="${h}" fill="none" stroke="${C.chalk}" stroke-width="2"/><text x="${10+i*w+w/2}" y="58" fill="${C.chalk}" font-size="20" text-anchor="middle">${p}</text>`;});
+  b+=`<path d="M10 22 Q 10 10 22 10 L ${W-22} 10 Q ${W-10} 10 ${W-10} 22" fill="none" stroke="${C.dim}" stroke-width="1.5"/>`;
+  return `<div class="bardiag"><div class="bartotal">${total}</div>${svg(W,80,b,460)}</div>`;}
+function vTen(a,b2){const n=a+(b2||0);const frames=n>10?2:1;let out='';for(let f=0;f<frames;f++){let s='';for(let i=0;i<10;i++){const r=Math.floor(i/5),c=i%5;const idx=f*10+i;const fill=idx<a?C.chalk:idx<n?C.yel:'none';s+=`<rect x="${c*32+2}" y="${r*32+2}" width="30" height="30" fill="none" stroke="${C.dim}" stroke-width="1.5"/>${fill!=='none'?`<circle cx="${c*32+17}" cy="${r*32+17}" r="10" fill="${fill}"/>`:''}`;}out+=svg(164,68,s,200);}return `<div class="row" style="gap:16px">${out}</div>`;}
+function vBlocks(h,t,o){let b='';let x=0;for(let i=0;i<(h||0);i++){b+=`<rect x="${x}" y="2" width="56" height="56" fill="${C.chalk}" opacity=".9" rx="3"/>`;for(let k=1;k<10;k++){b+=`<line x1="${x+k*5.6}" y1="2" x2="${x+k*5.6}" y2="58" stroke="var(--board)" stroke-width="1"/><line x1="${x}" y1="${2+k*5.6}" x2="${x+56}" y2="${2+k*5.6}" stroke="var(--board)" stroke-width="1"/>`;}x+=66;}
+  for(let i=0;i<t;i++){b+=`<rect x="${x}" y="2" width="12" height="56" fill="${C.chalk}" opacity=".9" rx="2"/>`;for(let k=1;k<10;k++)b+=`<line x1="${x}" y1="${2+k*5.6}" x2="${x+12}" y2="${2+k*5.6}" stroke="var(--board)" stroke-width="1"/>`;x+=20;}
+  x+=8;for(let i=0;i<o;i++){b+=`<rect x="${x+(i%5)*14}" y="${46-Math.floor(i/5)*14}" width="12" height="12" fill="${C.yel}" rx="2"/>`;}
+  return svg(Math.max(x+80,120),62,b,460);}
+
+/* ---------------- problem builders ---------------- */
+const F=(q,lines,v,hint)=>({kind:'fill',q,lines,v:v||'',hint:hint||''});
+const Ch=(q,opts,v,hint)=>({kind:'choice',q,opts:shuffle(opts),v:v||'',hint:hint||''});
+const Mu=(q,opts,v,hint)=>({kind:'multi',q,opts:shuffle(opts),v:v||'',hint:hint||''});
+const TF=(q,isTrue,v,hint)=>({kind:'choice',q,opts:[{t:'True',ok:isTrue},{t:'False',ok:!isTrue}],v:v||'',hint:hint||''});
+const wrongs=(ans,n,lo,hi)=>{const s=new Set();while(s.size<n){const w=R(Math.max(lo,ans-6),Math.min(hi,ans+6));if(w!==ans)s.add(w);}return [...s];};
+const choiceNum=(q,ans,v,hint,lo,hi)=>Ch(q,[{t:String(ans),ok:true},...wrongs(ans,3,lo||0,hi||100).map(w=>({t:String(w),ok:false}))],v,hint);
+const story=()=>{const nm=pick(NAMES);const th=pick(THINGS);return {nm,thing:th[0],box:th[1]};};
+
+const G={
+  /* grade 1 */
+  countOn(){const a=R(4,9),b=R(1,3);return F(`Count on to add. Start at ${a} and count on ${b}.`,[[`${a} + ${b} = `,B(a+b)]],vLine(b,1,14,a),`Start at ${a}: ${Array.from({length:b},(_,i)=>a+i+1).join(', ')}. So ${a} + ${b} = ${a+b}.`);},
+  doubles(){const a=R(2,9);return F(`Doubles fact.`,[[`${a} + ${a} = `,B(2*a)]],vGroups(2,a),`${a} + ${a} = ${2*a}.`);},
+  nearDouble(){const a=R(2,9);return F(`Use the doubles fact ${a} + ${a} = ${2*a} to find the near double.`,[[`${a} + ${a+1} = `,B(2*a+1)]],'',`${a} + ${a} = ${2*a}, and one more is ${2*a+1}.`);},
+  make10(){const a=R(6,9),b=R(10-a+1,9);const to10=10-a,rest=b-to10;return F(`Make a 10 to add ${a} + ${b}. Fill the ten-frame first.`,[[`${a} + ${to10} = 10`],[`10 + `,B(rest),` = `,B(a+b)]],vTen(a,b),`${a} needs ${to10} to make 10. ${b} − ${to10} = ${rest}. 10 + ${rest} = ${a+b}.`);},
+  ppw(){const w=R(8,20),p1=R(2,w-2);return F(`The whole is ${w}. One part is ${p1}. Find the other part.`,[[`${p1} + `,B(w-p1),` = ${w}`]],vBar([p1,'?'],w),`${w} − ${p1} = ${w-p1}.`);},
+  factFamily(){const a=R(2,9),b=R(1,9),c=a+b;return F(`Write the fact family for ${a}, ${b}, and ${c}.`,[[`${a} + ${b} = `,B(c)],[`${b} + ${a} = `,B(c)],[`${c} − ${a} = `,B(b)],[`${c} − ${b} = `,B(a)]],'',`A fact family uses the same three numbers: ${a}, ${b}, ${c}.`);},
+  trueFalse(){const a=R(2,9),b=R(2,9),c=R(2,9);let d=a+b-c;const isT=Math.random()<.5;if(!isT)d+=pick([-2,-1,1,2]);if(d<0||d>12)return G.trueFalse();return TF(`Is this equation True or False? Solve each side first.`,isT,`<div class="leq static">${a} + ${b} = ${c} + ${d}</div>`,`${a} + ${b} = ${a+b} and ${c} + ${d} = ${c+d}. ${isT?'Both sides are equal, so it is true.':'The sides are not equal, so it is false.'}`);},
+  missing(){const a=R(2,9),b=R(2,9),c=R(1,a+b-1);const d=a+b-c;return F(`Find the missing number to make the equation true.`,[[`${a} + ${b} = ${c} + `,B(d)]],'',`${a} + ${b} = ${a+b}. ${c} + ${d} = ${a+b}.`);},
+  missingSub(){const t=R(10,18),b=R(2,8);return F(`Find the missing number.`,[[`${t} − `,B(t-b),` = ${b}`]],vBar([b,'?'],t),`${t} − ${b} = ${t-b}.`);},
+  three(){const a=R(1,9),b=10-a,c=R(1,8);return F(`Add three numbers. Look for a 10.`,[[`${a} + ${b} + ${c} = `,B(a+b+c)]],'',`${a} + ${b} = 10, then 10 + ${c} = ${a+b+c}.`);},
+  tensOnes(){const t=R(1,9),o=R(0,9);return F(`${t} tens and ${o} ones is what number?`,[[B(t*10+o)]],vBlocks(0,t,o),`${t} tens = ${t*10}. ${t*10} + ${o} = ${t*10+o}.`);},
+  tenMore(){const n=R(11,89);const more=Math.random()<.5;return F(`What is 10 ${more?'more':'less'} than ${n}?`,[[B(more?n+10:n-10)]],'',`Only the tens digit changes: ${n} → ${more?n+10:n-10}.`);},
+  compare(){const a=R(10,99);let b=R(10,99);if(b===a)b++;return Ch(`Compare. ${a} ○ ${b}`,[{t:'>',ok:a>b},{t:'<',ok:a<b},{t:'=',ok:false}],'',`Compare the tens first. ${a} ${a>b?'>':'<'} ${b}.`);},
+  story1(){const s=story();const a=R(3,9),b=R(2,9);const kind=pick(['add','take','compare']);
+    if(kind==='add')return F(`${s.nm} has ${a} ${s.thing}. A friend gives ${s.nm} ${b} more. How many ${s.thing} does ${s.nm} have now?`,[[`${a} + ${b} = `,B(a+b)]],vBar([a,b],'?'),`Put together: ${a} + ${b} = ${a+b}.`);
+    if(kind==='take'){const t=a+b;return F(`${s.nm} has ${t} ${s.thing}. ${s.nm} gives away ${b}. How many are left?`,[[`${t} − ${b} = `,B(a)]],vBar([b,'?'],t),`Take from: ${t} − ${b} = ${a}.`);}
+    const t=a+b;return F(`${s.nm} has ${t} ${s.thing}. ${pick(NAMES)} has ${b}. How many more does ${s.nm} have?`,[[`${t} − ${b} = `,B(a)]],vBar([b,'?'],t),`Compare: ${t} − ${b} = ${a}.`);},
+  /* grade 2 */
+  make10sub(){const t=R(12,18),b=R(t-9,9);const first=t-10,rest=b-first;return F(`Make a 10 to subtract ${t} − ${b}. First subtract ${first} to get to 10.`,[[`${t} − ${first} = 10`],[`10 − `,B(rest),` = `,B(t-b)]],vTen(t),`${t} − ${first} = 10. ${b} − ${first} = ${rest}. 10 − ${rest} = ${t-b}.`);},
+  evenOdd(){const n=R(5,20);return Ch(`Pair up the cubes. Is ${n} even or odd?`,[{t:'Even',ok:n%2===0},{t:'Odd',ok:n%2===1}],vArray(2,Math.ceil(n/2)),`${n} ${n%2?'has one left over, so it is odd.':'makes pairs with none left over, so it is even.'}`);},
+  arrayAdd(){const r=R(2,5),c=R(2,5);const rows=Array(r).fill(c).join(' + ');return F(`Write an equation for the array. Add the rows.`,[[`${rows} = `,B(r*c)]],vArray(r,c,0,true),`${r} rows of ${c}: ${rows} = ${r*c}.`);},
+  arrayWhich(){const r=R(2,5),c=R(2,5);const s=story();const good=Array(r).fill(c).join(' + ')+' = '+(r*c);const ds=[`${c} + ${r} = ${c+r}`,Array(c).fill(r).join(' + ')+' = '+(r*c+r),Array(r).fill(c).join(' + ')+' = '+(r*c-c),Array(r+1).fill(c).join(' + ')+' = '+(r*c+c),`${r} + ${c} = ${r*c}`].filter((t,i,a)=>t!==good&&a.indexOf(t)===i).slice(0,3);return Ch(`${s.nm} has ${r} rows of ${s.thing} with ${c} in each row. Which equation shows how many ${s.thing} in all?`,[{t:good,ok:true},...ds.map(t=>({t,ok:false}))],vArray(r,c),`${r} rows of ${c} is ${good}.`);},
+  openAdd(){const a=R(23,69),t=R(1,3),o=R(1,9);const b=t*10+o;const hops=[...Array(t).fill(10),o];const lines=[];let v=a;hops.forEach(h=>{lines.push([`${v} + ${h} = `,B(v+h)]);v+=h;});return F(`Use the open number line to find ${a} + ${b}. Count on by tens, then ones.`,lines,vOpenLine(a,hops),`${a} + ${b} = ${a+b}.`);},
+  breakAdd(){const a=R(23,69),t=R(1,3),o=R(1,9);const b=t*10+o;return F(`Break apart ${b} into ${t*10} + ${o} to add.`,[[`${a} + ${t*10} = `,B(a+t*10)],[`${a+t*10} + ${o} = `,B(a+b)]],'',`${a} + ${b} = ${a+b}.`);},
+  compensate(){const a=pick([18,28,38,48,58,68,19,29,39,49,59]);const give=10-a%10;const b=R(give+5,39);return F(`Use compensation. ${a} is close to ${a+give}. Take ${give} from ${b} and give it to ${a}.`,[[`${a} + ${give} = ${a+give}`],[`${b} − ${give} = `,B(b-give)],[`${a+give} + ${b-give} = `,B(a+b)]],'',`${a} + ${b} = ${a+b}.`);},
+  openSub(){const t=R(2,5),o=R(1,9);const b=t*10+o;const a=R(b+11,99);const hops=[...Array(t).fill(-10),-o];const lines=[];let v=a;hops.forEach(h=>{lines.push([`${v} − ${-h} = `,B(v+h)]);v+=h;});return F(`Count back on the open number line to find ${a} − ${b}.`,lines,vOpenLine(a,hops),`${a} − ${b} = ${a-b}.`);},
+  partialSums(){const a=R(23,78),b=R(14,89);const t=(Math.floor(a/10)+Math.floor(b/10))*10,o=a%10+b%10;return F(`Add with partial sums.`,[[`Tens: ${Math.floor(a/10)*10} + ${Math.floor(b/10)*10} = `,B(t)],[`Ones: ${a%10} + ${b%10} = `,B(o)],[`${t} + ${o} = `,B(a+b)]],`<div class="leq static">${a} + ${b}</div>`,`${a} + ${b} = ${a+b}.`);},
+  hundreds(){const h=R(1,9),t=R(0,9),o=R(0,9);return F(`${h} hundreds, ${t} tens, and ${o} ones is what number?`,[[B(h*100+t*10+o)]],vBlocks(h,t,o),`${h*100} + ${t*10} + ${o} = ${h*100+t*10+o}.`);},
+  skip(){const by=pick([5,10,100]);const start=by*R(1,6);const seq=[start,start+by,start+2*by];return F(`Skip count by ${by}s. ${seq.join(', ')}, …`,[[B(start+3*by),`, `,B(start+4*by)]],'',`Add ${by} each time: ${seq.join(', ')}, ${start+3*by}, ${start+4*by}.`);},
+  compare3(){const a=R(100,999);let b=a+pick([-100,-10,-1,1,10,100,-90,9]);if(b<100||b>999)b=a-1;return Ch(`Compare. ${a} ○ ${b}`,[{t:'>',ok:a>b},{t:'<',ok:a<b},{t:'=',ok:false}],'',`Compare hundreds, then tens, then ones. ${a} ${a>b?'>':'<'} ${b}.`);},
+  sumsSelect(){const target=R(31,89);const opts=[];const good=R(2,3);for(let i=0;i<good;i++){const a=R(10,target-10);opts.push({t:`${a} + ${target-a}`,ok:true});}while(opts.length<5){const a=R(10,target-5);const d=pick([-3,-2,-1,1,2,3,10]);opts.push({t:`${a} + ${target-a+d}`,ok:false});}return Mu(`Which have a sum of ${target}? Select all that apply.`,opts,'',`Add each pair and keep the ones that equal ${target}.`);},
+  twoStep(){const s=story();const a=R(12,40),b=R(5,20),c=R(3,15);return F(`${s.nm} had ${a} ${s.thing}. ${s.nm} got ${b} more, then gave away ${c}. How many ${s.thing} does ${s.nm} have now?`,[[`${a} + ${b} = `,B(a+b)],[`${a+b} − ${c} = `,B(a+b-c)]],'',`First the hidden question: ${a} + ${b} = ${a+b}. Then ${a+b} − ${c} = ${a+b-c}.`);},
+  /* grade 3 */
+  repAdd(){const n=R(2,5),e=R(2,6);return F(`Write the repeated addition as multiplication.`,[[`${Array(n).fill(e).join(' + ')} = ${n} × `,B(e),` = `,B(n*e)]],vGroups(n,e),`${n} groups of ${e} is ${n} × ${e} = ${n*e}.`);},
+  lineFact(){const n=R(2,6),s=R(2,5);const o=[{t:`${n} × ${s} = ${n*s}`,ok:true},{t:`${n} × ${s+1} = ${n*(s+1)}`,ok:false},{t:`${n+1} × ${s} = ${(n+1)*s}`,ok:false},{t:`${n} + ${s} = ${n+s}`,ok:false}];return Ch(`Which multiplication fact does the number line show?`,o,vLine(n,s,n*s+2),`${n} jumps of ${s} land on ${n*s}: ${n} × ${s} = ${n*s}.`);},
+  arrayFact(){const r=R(2,9),c=R(2,9);return F(`Write a multiplication sentence for the array.`,[[B(r),` × `,B(c),` = `,B(r*c)]],vArray(r,c,0,true),`${r} rows of ${c}: ${r} × ${c} = ${r*c}.`);},
+  commutative(){const a=R(2,9),b=R(2,9);const good=`${b} × ${a}`;const ds=[`${a} × ${b+1}`,`${a+1} × ${b}`,`${a} + ${b}`,`${b+1} × ${a}`,`${a} × ${b-1}`].filter((t,i,arr)=>t!==good&&t!==`${a} × ${b}`&&arr.indexOf(t)===i).slice(0,3);return Ch(`Which expression is equal to ${a} × ${b}?`,[{t:good,ok:true},...ds.map(t=>({t,ok:false}))],'',`You can multiply factors in any order: ${a} × ${b} = ${b} × ${a} = ${a*b}.`);},
+  twosFives(){const f=pick([2,5]),n=R(3,9);const seq=Array.from({length:n},(_,i)=>(i+1)*f);return F(`Find ${n} × ${f}. Count by ${f}s. The ${n}th number is the product.`,[[`${seq.slice(0,-1).join(', ')}, `,B(n*f)],[`${n} × ${f} = `,B(n*f)]],vLine(n,f,n*f+1),`${seq.join(', ')}. So ${n} × ${f} = ${n*f}.`);},
+  mult5pattern(){const n=R(1,9);return Mu(`Which numbers are multiples of 5? Select all that apply.`,[{t:String(n*5),ok:true},{t:String(R(1,9)*5),ok:true},{t:String(R(1,9)*5+pick([1,2,3,4])),ok:false},{t:String(R(1,9)*5+pick([1,2,3,4])),ok:false},{t:String(R(1,9)*10),ok:true}],'',`Multiples of 5 end in 0 or 5.`);},
+  nines(){const n=R(2,9);return F(`Find ${n} × 9. Use the pattern: ${n} tens minus ${n} ones.`,[[`${n} × 10 = `,B(n*10)],[`${n*10} − ${n} = `,B(n*9)]],'',`${n} × 9 = ${n*10} − ${n} = ${n*9}. The digits of ${n*9} add up to 9.`);},
+  zeroOne(){const n=R(2,12);const k=pick(['z','o','sel']);if(k==='z')return F(`Zero Property: any number times 0 is 0.`,[[`${n} × 0 = `,B(0)],[`0 × ${R(2,12)} = `,B(0)]],'',`When you multiply by 0, the product is always 0.`);if(k==='o')return F(`Identity Property: any number times 1 is that number.`,[[`${n} × 1 = `,B(n)],[`1 × ${n+1} = `,B(n+1)]],'',`When you multiply by 1, the product is the other factor.`);
+    return Mu(`Which number completes the equation? Select all that apply.`,[{t:'0',ok:true},{t:'2',ok:true},{t:'5',ok:true},{t:'9',ok:true},{t:'10',ok:true}],`<div class="leq static">☐ × 0 = 0</div>`,`Any number times 0 is 0, so every choice works.`);},
+  tens3(){const n=R(2,9);const kind=Math.random()<.5;return kind?F(`${n} × 10 is ${n} groups of 10.`,[[`${n} × 10 = `,B(n*10)]],vGroups(Math.min(n,5),10),`${n} tens = ${n*10}.`):F(`Find the missing factor.`,[[`10 × `,B(n),` = ${n*10}`]],'',`${n*10} is ${n} tens, so 10 × ${n} = ${n*10}.`);},
+  breakArray(){const r=R(3,9),c=R(6,9);const s=pick([2,5]);const c2=c-s;return F(`Break apart the array. Write the two smaller facts, then add.`,[[`${r} × ${c} = (${r} × ${s}) + (${r} × ${c2})`],[`= `,B(r*s),` + `,B(r*c2)],[`= `,B(r*c)]],vArray(r,c,s),`${r} × ${s} = ${r*s} and ${r} × ${c2} = ${r*c2}. ${r*s} + ${r*c2} = ${r*c}.`);},
+  distribFacts(){const a=pick([3,4,6,7,8]),b=R(3,9);const s=a>5?5:2;const a2=a-s;return F(`Use known facts to find ${a} × ${b}. Think of ${a} rows as ${s} rows and ${a2} more rows.`,[[`${a} × ${b} = (${s} × ${b}) + (${a2} × ${b})`],[`= `,B(s*b),` + `,B(a2*b)],[`= `,B(a*b)]],vArray(a,b,0,true),`(${s} × ${b}) + (${a2} × ${b}) = ${s*b} + ${a2*b} = ${a*b}.`);},
+  distribChoice(){const a=R(6,9),b=R(3,9);const s=pick([2,5]);return Ch(`Which shows one way to use the Distributive Property to find ${a} × ${b}?`,[{t:`(${s} × ${b}) + (${a-s} × ${b})`,ok:true},{t:`(${a} + ${s}) × (${b} + ${a-s})`,ok:false},{t:`(${s} × ${b}) + (${s} × ${a-s})`,ok:false},{t:`(${a} × ${s}) + (${a} × ${s})`,ok:false}],'',`Break ${a} into ${s} + ${a-s}: (${s} × ${b}) + (${a-s} × ${b}).`);},
+  eights(){const b=R(3,9);return F(`Find 8 × ${b}. Double the 4s fact.`,[[`4 × ${b} = `,B(4*b)],[`${4*b} + ${4*b} = `,B(8*b)]],'',`8 × ${b} = 4 × ${b} doubled = ${8*b}.`);},
+  assoc(){const a=R(2,3),b=R(2,4),c=R(2,5);return F(`Multiply three factors. Group the first two.`,[[`${a} × ${b} × ${c} = (${a} × ${b}) × ${c} = `,B(a*b),` × ${c} = `,B(a*b*c)]],'',`${a} × ${b} = ${a*b}, then ${a*b} × ${c} = ${a*b*c}.`);},
+  divFact(){const d=R(2,9),q=R(2,9);return F(`Use a multiplication fact to divide.`,[[`${d*q} ÷ ${d} = ? Think: ${d} × `,B(q),` = ${d*q}`],[`${d*q} ÷ ${d} = `,B(q)]],'',`${d} × ${q} = ${d*q}, so ${d*q} ÷ ${d} = ${q}.`);},
+  famMul(){const a=R(2,9),b=R(2,9);return F(`Write the fact family for ${a}, ${b}, and ${a*b}.`,[[`${a} × ${b} = `,B(a*b)],[`${b} × ${a} = `,B(a*b)],[`${a*b} ÷ ${a} = `,B(b)],[`${a*b} ÷ ${b} = `,B(a)]],'',`A fact family uses ${a}, ${b}, and ${a*b} in all four facts.`);},
+  unknownEq(){const a=R(2,9),b=R(2,9);const k=pick(['mf','q']);return k==='mf'?F(`Find the unknown number.`,[[`${a} × `,B(b),` = ${a*b}`]],'',`${a} × ${b} = ${a*b}.`):F(`Find the unknown number.`,[[B(b),` = ${a*b} ÷ ${a}`]],'',`${a*b} ÷ ${a} = ${b}.`);},
+  share(){const s=story();const g=R(2,6),e=R(2,9);return F(`${s.nm} puts ${g*e} ${s.thing} into ${g} equal ${s.box}. How many ${s.thing} in each?`,[[`${g*e} ÷ ${g} = `,B(e)]],vGroups(g,e),`${g*e} shared ${g} ways is ${e} each.`);},
+  storyMul(){const s=story();const r=R(2,9),c=R(2,9);return F(`${s.nm} has ${r} ${s.box} with ${c} ${s.thing} in each. Write and solve an equation for the total.`,[[`${r} × ${c} = `,B(r*c)]],vBar(Array(r).fill(c),'?'),`${r} groups of ${c}: ${r} × ${c} = ${r*c}.`);},
+  hidden(){const s=story();const a=R(2,6),b=R(2,6),each=pick([2,5,10]);return F(`${s.nm} has ${a} ${s.box} of ${s.thing} and gets ${b} more ${s.box}. Each ${s.box.replace(/s$/,'')} holds ${each}. How many ${s.thing} in all? Answer the hidden question first.`,[[`${a} + ${b} = `,B(a+b),` ${s.box}`],[`${a+b} × ${each} = `,B((a+b)*each),` ${s.thing}`]],'',`Hidden question: ${a} + ${b} = ${a+b} ${s.box}. Then ${a+b} × ${each} = ${(a+b)*each}.`);},
+  multTens(){const a=R(2,9),b=R(2,9);return F(`Use a basic fact and place value.`,[[`${a} × ${b} = `,B(a*b)],[`${a} × ${b*10} = `,B(a*b*10)]],'',`${a} × ${b} tens = ${a*b} tens = ${a*b*10}.`);},
+  area(){const w=R(3,9),h=R(2,7);return F(`Find the area. Count the rows and columns of unit squares.`,[[`${h} × ${w} = `,B(w*h),` square units`]],vArray(h,w,0,true),`${h} rows of ${w} squares: ${h} × ${w} = ${w*h}.`);},
+  areaSplit(){const w=R(6,9),h=R(2,6),s=pick([2,5]);return F(`Break the rectangle into two smaller rectangles to find the area.`,[[`(${h} × ${s}) + (${h} × ${w-s}) = `,B(h*s),` + `,B(h*(w-s)),` = `,B(h*w)]],vArray(h,w,s),`${h*s} + ${h*(w-s)} = ${h*w} square units.`);},
+  reason(){const items=[
+    Ch(`Ben says that when any number from 1 to 9 is multiplied by 5, the product always has a 0 or 5 in the ones place. Is this reasonable?`,[{t:'Yes. Multiples of 5 end in 0 or 5.',ok:true},{t:'No. 5 × 3 = 15 does not end in 0.',ok:false},{t:'No. 5 × 2 = 7, which ends in 7.',ok:false}],'',`Count by 5s: 5, 10, 15, 20 … every product ends in 0 or 5.`),
+    Ch(`Zach arranges quarters in 6 rows and 5 columns. David arranges his in 5 rows and 6 columns. Who has more?`,[{t:'They have the same. 6 × 5 = 5 × 6 = 30.',ok:true},{t:'Zach, because 6 rows is more than 5 rows.',ok:false},{t:'David, because 6 columns is more.',ok:false}],'',`The Commutative Property: the order of the factors does not change the product.`),
+    Ch(`Bert says 2 × 9 is 19. How can you show that Bert is wrong?`,[{t:'Multiples of 2 are even, and 19 is odd. 2 × 9 = 18.',ok:true},{t:'2 × 9 is 20 because 9 is close to 10.',ok:false},{t:'Bert is right because 9 + 10 = 19.',ok:false}],'',`Every multiple of 2 is even. 2 × 9 = 18.`),
+    Ch(`Use the expression 10 × ?, where ? is a factor from 1 to 9. What is true about the ones digit of every product?`,[{t:'It is always 0.',ok:true},{t:'It is always 1.',ok:false},{t:'It matches the factor.',ok:false}],'',`10, 20, 30 … every multiple of 10 ends in 0.`),
+    Ch(`Is 9 × 7 = 63 reasonable? Use the 9s pattern.`,[{t:'Yes. 7 tens − 7 = 63, and 6 + 3 = 9.',ok:true},{t:'No. 9 × 7 should end in 9.',ok:false},{t:'No. 9 × 7 = 70 − 1 = 69.',ok:false}],'',`9 × 7 = 70 − 7 = 63. The digits add up to 9.`),
+    Ch(`Isabella has $45 to spend on shirts that cost $5 each. How many shirts can she buy?`,[{t:'9, because 9 × 5 = 45.',ok:true},{t:'8, because 8 × 5 = 45.',ok:false},{t:'40, because 45 − 5 = 40.',ok:false}],'',`Think multiplication: 9 × $5 = $45, so 9 shirts.`)];
+    return pick(items);}
+};
+
+/* ---------------- lesson list (enVision Mathematics 2020 order) ---------------- */
+const LESSONS=[
+  {id:'g1-l01',grade:1,topic:'Topic 2–3 · Addition strategies',title:'Count on to add',gens:['countOn']},
+  {id:'g1-l02',grade:1,topic:'Topic 2–3 · Addition strategies',title:'Doubles and near doubles',gens:['doubles','nearDouble']},
+  {id:'g1-l03',grade:1,topic:'Topic 3 · Addition facts to 20',title:'Make a 10 to add',gens:['make10']},
+  {id:'g1-l04',grade:1,topic:'Topic 1 · Understand addition and subtraction',title:'Part-part-whole',gens:['ppw','missingSub']},
+  {id:'g1-l05',grade:1,topic:'Topic 4 · Subtraction facts to 20',title:'Fact families',gens:['factFamily']},
+  {id:'g1-l06',grade:1,topic:'Topic 5 · Equations',title:'True or false equations',gens:['trueFalse']},
+  {id:'g1-l07',grade:1,topic:'Topic 5 · Equations',title:'Find the missing number',gens:['missing','missingSub']},
+  {id:'g1-l08',grade:1,topic:'Topic 5 · Equations',title:'Add three numbers',gens:['three']},
+  {id:'g1-l09',grade:1,topic:'Topic 8–9 · Place value',title:'Tens and ones',gens:['tensOnes','tenMore']},
+  {id:'g1-l10',grade:1,topic:'Topic 9 · Compare numbers',title:'Compare two-digit numbers',gens:['compare']},
+  {id:'g1-l11',grade:1,topic:'Topic 1 · Word problems',title:'Story problems with bar diagrams',gens:['story1']},
+  {id:'g2-l01',grade:2,topic:'Topic 1 · Facts within 20',title:'Make a 10 to add and subtract',gens:['make10','make10sub']},
+  {id:'g2-l02',grade:2,topic:'Topic 1 · Facts within 20',title:'Doubles, near doubles, missing numbers',gens:['nearDouble','missing','three']},
+  {id:'g2-l03',grade:2,topic:'Topic 2 · Equal groups',title:'Even or odd',gens:['evenOdd']},
+  {id:'g2-l04',grade:2,topic:'Topic 2 · Equal groups',title:'Arrays and repeated addition',gens:['arrayAdd','arrayWhich']},
+  {id:'g2-l05',grade:2,topic:'Topic 3 · Add within 100',title:'Open number line',gens:['openAdd']},
+  {id:'g2-l06',grade:2,topic:'Topic 3 · Add within 100',title:'Break apart to add',gens:['breakAdd']},
+  {id:'g2-l07',grade:2,topic:'Topic 3 · Add within 100',title:'Compensation',gens:['compensate']},
+  {id:'g2-l08',grade:2,topic:'Topic 4 · Fluently add within 100',title:'Partial sums',gens:['partialSums']},
+  {id:'g2-l09',grade:2,topic:'Topic 5 · Subtract within 100',title:'Count back on a number line',gens:['openSub']},
+  {id:'g2-l10',grade:2,topic:'Topic 3 · Add within 100',title:'Which have the same sum?',gens:['sumsSelect']},
+  {id:'g2-l11',grade:2,topic:'Topic 9 · Numbers to 1,000',title:'Hundreds, tens, and ones',gens:['hundreds','skip']},
+  {id:'g2-l12',grade:2,topic:'Topic 9 · Numbers to 1,000',title:'Compare three-digit numbers',gens:['compare3']},
+  {id:'g2-l13',grade:2,topic:'Topic 7 · Problem solving',title:'Two-step story problems',gens:['twoStep']},
+  {id:'g3-l01',grade:3,topic:'Topic 1 · Understand multiplication',title:'Equal groups and repeated addition',gens:['repAdd']},
+  {id:'g3-l02',grade:3,topic:'Topic 1 · Understand multiplication',title:'Multiplication on the number line',gens:['lineFact']},
+  {id:'g3-l03',grade:3,topic:'Topic 1 · Understand multiplication',title:'Arrays and the Commutative Property',gens:['arrayFact','commutative']},
+  {id:'g3-l04',grade:3,topic:'Topic 2 · Facts: use patterns',title:'2s and 5s: skip count',gens:['twosFives','mult5pattern']},
+  {id:'g3-l05',grade:3,topic:'Topic 2 · Facts: use patterns',title:'9s: add ten, subtract one',gens:['nines']},
+  {id:'g3-l06',grade:3,topic:'Topic 2 · Facts: use patterns',title:'Zero and one',gens:['zeroOne']},
+  {id:'g3-l07',grade:3,topic:'Topic 2 · Facts: use patterns',title:'Multiply by 10',gens:['tens3']},
+  {id:'g3-l08',grade:3,topic:'Topic 2 · Model with math',title:'Bar diagrams and the hidden question',gens:['storyMul','hidden']},
+  {id:'g3-l09',grade:3,topic:'Topic 3 · Apply properties',title:'Break apart arrays (Distributive Property)',gens:['breakArray','distribChoice']},
+  {id:'g3-l10',grade:3,topic:'Topic 3 · Apply properties',title:'3, 4, 6, 7 as factors',gens:['distribFacts']},
+  {id:'g3-l11',grade:3,topic:'Topic 3 · Apply properties',title:'8s: double the 4s',gens:['eights']},
+  {id:'g3-l12',grade:3,topic:'Topic 3 · Apply properties',title:'Three factors (Associative Property)',gens:['assoc']},
+  {id:'g3-l13',grade:3,topic:'Topic 4 · Use multiplication to divide',title:'Division as an unknown factor',gens:['divFact','unknownEq']},
+  {id:'g3-l14',grade:3,topic:'Topic 4 · Use multiplication to divide',title:'Multiplication and division fact families',gens:['famMul']},
+  {id:'g3-l15',grade:3,topic:'Topic 4–5 · Problem solving',title:'Sharing and equal-group stories',gens:['share','storyMul']},
+  {id:'g3-l16',grade:3,topic:'Topic 6 · Area',title:'Area of rectangles',gens:['area','areaSplit']},
+  {id:'g3-l17',grade:3,topic:'Topic 10 · Multiply by multiples of 10',title:'Basic facts and place value',gens:['multTens']},
+  {id:'g3-l18',grade:3,topic:'Reasoning · Explain your thinking',title:'Is it reasonable? Explain',gens:['reason']}
+];
+
+const LBY={};LESSONS.forEach(l=>LBY[l.id]=l);
+window.MF_TITLES={};LESSONS.forEach(l=>window.MF_TITLES[l.id]=l.title);
+const ROUND=8;
+
+/* ---------------- views ---------------- */
+const TOPIC_NOTE={1:'The strategies first grade uses: counting on, doubles, make a 10, part-part-whole, fact families.',2:'Make a 10, arrays, open number lines, break apart, compensation, partial sums, numbers to 1,000.',3:'Equal groups, arrays, patterns for 2s, 5s, 9s, 10s, break-apart arrays, division as an unknown factor, area.'};
+function viewLessons(){
+  const s=M.activeStudent();const p=M.getProgress(s.id);
+  const order=[s.grade||1,...[1,2,3].filter(g=>g!==(s.grade||1))];
+  let html=`<div class="page"><h1>${esc(s.name)}’s lessons</h1><p class="muted">The way school teaches it: the same models and problem types as the enVision books. ${ROUND} problems a round, no clock, scored.</p>`;
+  order.forEach(g=>{html+=`<h2>${M.GRADE_NAMES[g]} <small>${TOPIC_NOTE[g]}</small></h2><div class="tiles">`;
+    LESSONS.filter(l=>l.grade===g).forEach(l=>{const b=p.best[l.id];const n=(p.sessions||[]).filter(x=>x.lv===l.id).length;
+      html+=`<button class="tile" data-act="ls-open" data-id="${l.id}"><span class="s">${esc(l.topic)}</span><span class="t">${esc(l.title)}</span><span class="foot"><span class="s">${n?n+(n===1?' round':' rounds'):'not started'}</span><span class="grade ${b?'':'empty'}" style="margin-left:auto">${b?b.pct+'%':'–'}</span></span></button>`;});
+    html+=`</div>`;});
+  return html+`</div>`;
+}
+function openLesson(id){const l=LBY[id];const s=M.activeStudent();const p=M.getProgress(s.id);const b=p.best[id];const sample=G[l.gens[0]]();
+  $('#sheet').innerHTML=`<button class="x" data-act="close-sheet" aria-label="Close">×</button><h3>${esc(l.title)}</h3><p class="muted">${esc(l.topic)}${b?` · best score <span class="grade">${b.pct}%</span>`:''}</p>
+  <div class="lsample"><div class="lq small muted">Example</div><div class="lq">${sample.q}</div>${sample.v}</div>
+  <div class="row" style="margin-top:14px"><button class="btn big primary" data-act="ls-start" data-id="${id}">Start lesson</button></div>
+  <p class="small muted" style="margin-top:10px">${ROUND} problems. A miss shows the strategy and comes back at the end of the round.</p>`;
+  M.openSheet();}
+
+let L=null;
+function startLesson(id){const l=LBY[id];const s=M.activeStudent();const p=M.getProgress(s.id);
+  const q=[];let gi=shuffle(l.gens);for(let i=0;i<ROUND;i++){q.push({p:G[gi[i%gi.length]](),first:true});if((i+1)%gi.length===0)gi=shuffle(l.gens);}
+  L={lesson:l,student:s,prog:p,queue:q,idx:0,answered:0,correct:0,missed:[],startedAt:Date.now(),lock:false,blanks:[],bi:0,sel:new Set(),ended:false};
+  M.closeSheet();M.state.view='lsession';M.render();show();}
+function viewSession(){return `<div class="session"><div class="sbar"><button class="quit" data-act="ls-quit" aria-label="Stop">×</button><span class="title">${esc(L.lesson.title)} · Lesson</span><span class="count" id="lcount"></span></div>
+  <div class="sbody"><div class="lstage" id="lstage"></div><div class="pad" id="lpad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="key lkey" data-lkey="${n}">${n}</button>`).join('')}<button class="key lkey back" data-lkey="back" aria-label="Backspace">⌫</button><button class="key lkey" data-lkey="0">0</button><button class="key lkey enter" data-lkey="enter" aria-label="Enter">↵</button></div></div></div>`;}
+function show(){if(!L||L.idx>=L.queue.length)return endLesson();const it=L.queue[L.idx];const p=it.p;L.cur=it;L.blanks=[];L.bi=0;L.sel=new Set();L.lock=false;
+  const c=$('#lcount');if(c)c.textContent=(it.first?'':'again · ')+Math.min(L.answered+1,ROUND)+' of '+ROUND;
+  let body=`<div class="lq">${p.q}</div>${p.v}`;
+  if(p.kind==='fill'){let bi=0;body+=`<div class="leqs">`+p.lines.map(line=>`<div class="leq">${line.map(seg=>typeof seg==='string'?esc(seg):(L.blanks.push({ans:seg.b,val:''}),`<button class="blank" data-act="ls-blank" data-bi="${bi++}"></button>`)).join('')}</div>`).join('')+`</div>`;}
+  else{body+=`<div class="opts">${p.opts.map((o,i)=>`<button class="opt" data-act="ls-opt" data-i="${i}"><span class="ltr">${String.fromCharCode(65+i)}</span>${esc(o.t)}</button>`).join('')}</div>${p.kind==='multi'?`<div class="row" style="margin-top:12px"><button class="btn primary" data-act="ls-check">Check</button></div>`:''}`;}
+  body+=`<div class="lfb" id="lfb"></div>`;
+  $('#lstage').innerHTML=body;$('#lstage').scrollTop=0;$('#lpad').style.display=p.kind==='fill'?'':'none';paintBlanks();}
+function paintBlanks(){document.querySelectorAll('.blank').forEach((el,i)=>{const b=L.blanks[i];el.textContent=b.val;el.classList.toggle('active',i===L.bi&&!L.lock);el.classList.toggle('empty',b.val==='');});}
+function lkey(k){if(!L||L.lock||!L.cur||L.cur.p.kind!=='fill')return;const b=L.blanks[L.bi];if(!b)return;
+  if(k==='back'){b.val=b.val.slice(0,-1);paintBlanks();return;}
+  if(k==='enter'){if(b.val==='')return;advance();return;}
+  if(b.val.length>=4||(b.val==='0'&&k==='0'))return;b.val+=k;paintBlanks();
+  if(M.roster.settings.autoSubmit!==false&&b.val.length>=String(b.ans).length)advance();}
+function advance(){const next=L.blanks.findIndex((b,i)=>i!==L.bi&&b.val==='');if(next>=0){L.bi=next;paintBlanks();}else if(L.blanks.every(b=>b.val!=='')){evaluate(L.blanks.every(b=>parseInt(b.val,10)===b.ans));}else{L.bi=L.blanks.findIndex(b=>b.val==='');paintBlanks();}}
+function evaluate(ok){const it=L.cur,p=it.p;L.lock=true;
+  if(it.first){L.answered++;if(ok)L.correct++;else L.missed.push(p);}
+  if(p.kind==='fill'){document.querySelectorAll('.blank').forEach((el,i)=>{const b=L.blanks[i];el.classList.remove('active');const good=parseInt(b.val,10)===b.ans;el.classList.add(good?'good':'bad');if(!good)el.insertAdjacentHTML('afterend',`<span class="fix">${b.ans}</span>`);});}
+  else{document.querySelectorAll('.opt').forEach((el,i)=>{const o=p.opts[i];const picked=L.sel.has(i);if(o.ok)el.classList.add('good');if(picked&&!o.ok)el.classList.add('bad');el.disabled=true;});}
+  const fb=$('#lfb');
+  if(ok){fb.innerHTML=`<div class="mark ok"><svg viewBox="0 0 100 100"><path d="M18 54 L42 76 L84 26"/></svg></div>`;setTimeout(()=>{if(!L)return;L.idx++;show();},700);}
+  else{fb.innerHTML=`<div class="lhint">${esc(p.hint)}</div><button class="btn primary" data-act="ls-next">Next</button>`;if(it.first)L.queue.push({p,first:false});}
+}
+function pickOpt(i){if(!L||L.lock)return;const p=L.cur.p;if(p.kind==='choice'){L.sel=new Set([i]);document.querySelectorAll('.opt')[i].classList.add('picked');evaluate(!!p.opts[i].ok);}
+  else{if(L.sel.has(i))L.sel.delete(i);else L.sel.add(i);document.querySelectorAll('.opt').forEach((el,j)=>el.classList.toggle('picked',L.sel.has(j)));}}
+function checkMulti(){if(!L||L.lock)return;const p=L.cur.p;const ok=p.opts.every((o,i)=>!!o.ok===L.sel.has(i));evaluate(ok);}
+function endLesson(partial){if(!L||L.ended)return;L.ended=true;const p=L.prog,l=L.lesson;const total=L.answered,correct=L.correct;const pct=total?Math.round(100*correct/total):0;const secs=Math.round((Date.now()-L.startedAt)/1000);
+  const rec={id:M.uid(),ts:Date.now(),lv:l.id,mode:'lesson',total,answered:total,correct,secs,limit:0,pct,missed:[],partial:!!partial};
+  p.sessions.push(rec);if(p.sessions.length>M.SESSION_CAP)p.sessions=p.sessions.slice(-M.SESSION_CAP);
+  let newBest=false;const b=p.best[l.id];const cand={pct,secs,ts:rec.ts};if(!b||M.better(cand,b)){p.best[l.id]=cand;newBest=true;}
+  M.saveProgress(L.student.id);L.result={rec,newBest};M.state.view='lresults';M.render();}
+function viewResults(){const {rec,newBest}=L.result;const l=L.lesson;
+  return `<div class="page"><h1>${esc(l.title)} · Lesson</h1><div class="report"><div class="biggrade">${rec.pct}%</div><div class="line1">${rec.correct} of ${rec.total} right on the first try</div><div class="line2">${rec.total} problems in ${M.fmtTime(rec.secs)}${rec.partial?' (stopped early)':''}</div><div class="line3">${newBest?'<span class="best">New best for this lesson</span>':''}</div></div>
+  ${L.missed.length?`<h2>Missed <small>the strategy to remember</small></h2>${L.missed.map(p=>`<div class="lmiss"><div>${p.q}</div><div class="lhint">${esc(p.hint)}</div></div>`).join('')}`:'<p class="muted">Nothing missed.</p>'}
+  ${M.tonightStrip(L.prog)}
+  <div class="row" style="margin-top:18px"><button class="btn big primary" data-act="ls-start" data-id="${l.id}">Do it again</button><button class="btn big" data-act="nav" data-view="lessons">All lessons</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="nav" data-view="progress">Progress</button></div></div>`;}
+async function quitLesson(){if(!L)return;const ok=await M.confirmModal('Stop this lesson?','Stop',true);if(!ok)return;if(L.answered>=3){endLesson(true);return;}M.saveProgress(L.student.id);L=null;M.state.view='lessons';M.render();}
+
+window.MF_VIEWS={lessons:viewLessons,lsession:viewSession,lresults:viewResults};
+if(window.MF_VIEWS[M.state.view])M.render();
+window.MF_PROGRESS_EXTRA=function(p){const done=LESSONS.filter(l=>p.best[l.id]);if(!done.length)return `<h2>Lessons</h2><p class="muted">No lesson rounds yet. They are on the Lessons tab.</p>`;
+  return `<h2>Lessons <small>best score per lesson</small></h2><div class="chips">${done.map(l=>`<span class="chip">${esc(l.title)} <span class="grade" style="margin-left:4px">${p.best[l.id].pct}%</span></span>`).join('')}</div>`;};
+
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act;
+  if(a==='ls-open')openLesson(el.dataset.id);
+  else if(a==='ls-start'){L=null;startLesson(el.dataset.id);}
+  else if(a==='ls-quit')quitLesson();
+  else if(a==='ls-blank'){if(L&&!L.lock){L.bi=Number(el.dataset.bi);paintBlanks();}}
+  else if(a==='ls-opt')pickOpt(Number(el.dataset.i));
+  else if(a==='ls-check')checkMulti();
+  else if(a==='ls-next'){if(L){L.idx++;show();}}
+  else if(a==='nav'){if(M.state.view!=='lsession')L=null;}
+});
+document.addEventListener('pointerdown',e=>{const k=e.target.closest('.lkey');if(!k)return;e.preventDefault();k.classList.add('down');lkey(k.dataset.lkey);});
+document.addEventListener('keydown',e=>{if(!L||M.state.view!=='lsession')return;if(/^[0-9]$/.test(e.key)){lkey(e.key);e.preventDefault();}else if(e.key==='Backspace'){lkey('back');e.preventDefault();}else if(e.key==='Enter'){if(L.cur&&L.cur.p.kind==='multi'&&!L.lock)checkMulti();else lkey('enter');e.preventDefault();}});
+
+/* ---------------- family sync (Supabase) ---------------- */
+const SB={url:'https://tpaxwgtbuaptivcqtzjm.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwYXh3Z3RidWFwdGl2Y3F0emptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1Mzk5MTIsImV4cCI6MjA5OTExNTkxMn0.dO4ia9J5stw0XJZRy6_6QVWgTD8RZ3rl1hbpXYcUVz8',table:'math_facts_docs'};
+let family=(M.loadJSON('mathfacts.family')||{}).code||'';let syncMsg='';
+const hdr=()=>({'apikey':SB.key,'Authorization':'Bearer '+SB.key,'Content-Type':'application/json','x-family':family});
+async function push(id,data){if(!family||typeof fetch!=='function')return;try{const r=await fetch(`${SB.url}/rest/v1/${SB.table}`,{method:'POST',headers:Object.assign(hdr(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([{id:family+':'+id,family,data,updated_at:data.updatedAt||Date.now()}])});syncMsg=r.ok?'Synced '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'Sync failed ('+r.status+')';}catch(e){syncMsg='Sync failed (offline?)';}note();}
+async function pull(){if(!family||typeof fetch!=='function')return;try{const r=await fetch(`${SB.url}/rest/v1/${SB.table}?family=eq.${encodeURIComponent(family)}&select=id,data`,{headers:hdr()});if(!r.ok){syncMsg='Sync failed ('+r.status+')';note();return;}const rows=await r.json();let changed=false;
+    rows.forEach(row=>{const key=row.id.slice(family.length+1);
+      if(key==='roster'){const rem=row.data;if((rem.updatedAt||0)>(M.roster.updatedAt||0)){M.setRoster(rem);changed=true;}else if((M.roster.updatedAt||0)>(rem.updatedAt||0))push('roster',M.roster);}
+      else if(key.startsWith('progress:')){const sid=key.slice(9);const local=M.getProgress(sid);const before=JSON.stringify(local);const merged=M.mergeProgress(local,row.data);Object.assign(local,merged);M.saveJSON(M.LS.progress(sid),local);if(JSON.stringify(local)!==before)changed=true;if(JSON.stringify(local)!==JSON.stringify(row.data))push('progress:'+sid,local);}});
+    const have=new Set(rows.map(r=>r.id));M.roster.students.forEach(s=>{const p=M.getProgress(s.id);if(!have.has(family+':progress:'+s.id)&&p.updatedAt>0)push('progress:'+s.id,p);});
+    if(!have.has(family+':roster')&&M.roster.updatedAt>0)push('roster',M.roster);
+    syncMsg='Synced '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});note();
+    const v=M.state.view;if(changed&&(v==='progress'||v==='levels'||v==='lessons'))M.render();}catch(e){syncMsg='Sync failed (offline?)';note();}}
+function note(){const el=$('#familynote');if(el)el.textContent=family?syncMsg||'Sync code set.':'';}
+window.MF_ONSAVE=function(kind,id,data){if(!family)return;push(kind==='roster'?'roster':'progress:'+id,data);};
+window.MF_SETUP_EXTRA=function(){return `<div class="field"><div class="lab">Family sync code<small>Type the same word on every tablet and phone (6+ letters) and progress, calendars and scores stay in step across all of them.</small></div><div class="row"><input type="text" id="familyin" value="${esc(family)}" placeholder="e.g. fitzmath" maxlength="32" autocapitalize="off" autocorrect="off"><button class="btn sm" data-act="ls-family">Save</button></div></div><p class="sync" id="familynote">${family?esc(syncMsg||'Sync code set.'):''}</p>`;};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act="ls-family"]');if(!el)return;const v=($('#familyin').value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');if(v.length<6){syncMsg='Use at least 6 letters or numbers.';family='';M.saveJSON('mathfacts.family',{code:''});note();return;}family=v;M.saveJSON('mathfacts.family',{code:v});syncMsg='Connecting…';note();pull();});
+if(family){pull();setInterval(()=>{if(!document.hidden)pull();},45000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull();});}
 })();
 </script>
 </body>
