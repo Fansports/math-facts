@@ -457,7 +457,28 @@ function weakFacts(p,facts,limit){
 }
 function fmtTime(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function cheerFor(pct,name){const n=name?', '+name:'';const g=pct>=100?['Perfect round'+n+'!','Every single one!','Flawless.']:pct>=90?['Great work'+n+'!','You’re on a roll!','Strong round'+n+'.']:pct>=70?['Good job, keep going!','Getting there'+n+'!','Nice effort.']:['Every try counts'+n+'.','Tomorrow you’ll get more.','Keep at it'+n+'.'];return g[Math.floor(Math.random()*g.length)];}
-function celebrate(pct){if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('.cele').forEach(e=>e.remove());const n=pct>=90?52:pct>=70?30:16;const el=document.createElement('div');el.className='cele';const cols=['var(--yellow)','var(--chalk)','var(--yellow)','#ffd6e7','#bfe3ff','var(--chalk)'];let h='';for(let i=0;i<n;i++){const sz=8+Math.random()*16;h+=`<i style="left:${(Math.random()*100).toFixed(1)}%;--s:${sz.toFixed(0)}px;--d:${(2.6+Math.random()*2.6).toFixed(1)}s;--dl:${(Math.random()*1.8).toFixed(1)}s;color:${cols[i%cols.length]}"></i>`;}el.innerHTML=h;document.body.appendChild(el);setTimeout(()=>el.remove(),6000);}
+let AC=null;
+function unlockAudio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}}
+document.addEventListener('pointerdown',unlockAudio,{passive:true});document.addEventListener('keydown',unlockAudio);
+function playCheer(pct){
+  if(device.sound===false)return;unlockAudio();if(!AC)return;const ctx=AC,t0=ctx.currentTime+0.05;
+  const big=pct>=90,mid=pct>=70;const dur=big?3.6:mid?2.6:1.8;const claps=Math.round(dur*(big?24:mid?16:9));
+  const master=ctx.createGain();master.gain.value=big?.9:mid?.7:.5;master.connect(ctx.destination);
+  const nb=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  /* individual claps: short band-passed noise bursts, dense in the middle, thinning at the end */
+  for(let i=0;i<claps;i++){const u=Math.random();const at=t0+dur*(u<.8?Math.pow(u/.8,1.3)*.75:.75+(u-.8)/.2*.25);const src=ctx.createBufferSource();src.buffer=nb;src.loop=true;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900+Math.random()*2200;bp.Q.value=1.2;
+    const g=ctx.createGain();const peak=.25+Math.random()*.35;g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(peak,at+.004);g.gain.exponentialRampToValueAtTime(.001,at+.05+Math.random()*.05);
+    src.connect(bp);bp.connect(g);g.connect(master);src.start(at,Math.random());src.stop(at+.14);}
+  /* crowd bed: low rumble that swells and fades */
+  const bed=ctx.createBufferSource();bed.buffer=nb;bed.loop=true;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;const bg=ctx.createGain();bg.gain.setValueAtTime(0,t0);bg.gain.linearRampToValueAtTime(big?.14:.08,t0+.5);bg.gain.linearRampToValueAtTime(.0001,t0+dur);bed.connect(lp);lp.connect(bg);bg.connect(master);bed.start(t0);bed.stop(t0+dur+.1);
+  /* a few whoops for strong rounds */
+  if(mid){const n=big?5:3;for(let i=0;i<n;i++){const at=t0+.2+Math.random()*(dur*.5);const o=ctx.createOscillator();o.type='triangle';const f0=260+Math.random()*120;o.frequency.setValueAtTime(f0,at);o.frequency.exponentialRampToValueAtTime(f0*2.1,at+.25);o.frequency.exponentialRampToValueAtTime(f0*1.4,at+.7);
+    const vg=ctx.createGain();vg.gain.setValueAtTime(0,at);vg.gain.linearRampToValueAtTime(.08,at+.08);vg.gain.exponentialRampToValueAtTime(.001,at+.75);const vf=ctx.createBiquadFilter();vf.type='lowpass';vf.frequency.value=1800;o.connect(vf);vf.connect(vg);vg.connect(master);o.start(at);o.stop(at+.8);}}
+  /* ta-da chime for 90% and up */
+  if(big){[523.25,659.25,783.99,1046.5].forEach((f,i)=>{const at=t0+.1+i*.13;const o=ctx.createOscillator();o.type='sine';o.frequency.value=f;const g=ctx.createGain();g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(.18,at+.02);g.gain.exponentialRampToValueAtTime(.001,at+(i===3?1.4:.5));o.connect(g);g.connect(master);o.start(at);o.stop(at+1.5);});}
+}
+function celebrate(pct){playCheer(pct);if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('.cele').forEach(e=>e.remove());const n=pct>=90?52:pct>=70?30:16;const el=document.createElement('div');el.className='cele';const cols=['var(--yellow)','var(--chalk)','var(--yellow)','#ffd6e7','#bfe3ff','var(--chalk)'];let h='';for(let i=0;i<n;i++){const sz=8+Math.random()*16;h+=`<i style="left:${(Math.random()*100).toFixed(1)}%;--s:${sz.toFixed(0)}px;--d:${(2.6+Math.random()*2.6).toFixed(1)}s;--dl:${(Math.random()*1.8).toFixed(1)}s;color:${cols[i%cols.length]}"></i>`;}el.innerHTML=h;document.body.appendChild(el);setTimeout(()=>el.remove(),6000);}
 function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 function dayKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function goalSecs(){return (Number(roster.settings.goal)||10)*60;}
@@ -765,6 +786,7 @@ function viewSetup(){
   <h2>Students</h2>`;
   roster.students.forEach(x=>{html+=`<div class="srow"><input type="text" value="${esc(x.name)}" data-act="rename" data-id="${x.id}" aria-label="Name" maxlength="24"><select data-act="set-grade" data-id="${x.id}" aria-label="Grade"><option value="1" ${x.grade==1?'selected':''}>First grade</option><option value="2" ${x.grade==2?'selected':''}>Second grade</option><option value="3" ${x.grade==3?'selected':''}>Third grade</option></select><button class="btn sm" data-act="remove-student" data-id="${x.id}" ${roster.students.length<=1?'disabled':''}>Remove</button></div>`;});
   html+=`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="add-student">Add a student</button></div>
+  <div class="field" style="margin-top:14px"><div class="lab">Clapping and cheers at the end of a round<small>This device. Turn the tablet’s volume up a notch or two.</small></div><button class="switch" role="switch" aria-checked="${device.sound!==false}" data-act="dtoggle" data-k="sound"></button></div>
   <h2>Chalkboard color <small>this device</small></h2>
   <div class="swatches">${BOARDS.map(b=>`<button class="swatch" style="--sw:${b[2]}" data-act="set-board" data-v="${b[0]}" aria-pressed="${(device.theme||'green')===b[0]}" aria-label="${b[1]}">${b[1]}</button>`).join('')}</div>
   <h2>Answering</h2>
@@ -811,6 +833,7 @@ document.addEventListener('click',async e=>{
   else if(act==='toggle'){const k=el.dataset.k;roster.settings[k]=!(el.getAttribute('aria-checked')==='true');saveRoster();render();}
   else if(act==='set'){const k=el.dataset.k;let v=el.dataset.v;if(k!=='layout')v=Number(v);roster.settings[k]=v;saveRoster();render();}
   else if(act==='set-board'){device.theme=el.dataset.v;saveJSON(LS.device,device);applyBoard();render();}
+  else if(act==='dtoggle'){const k=el.dataset.k;device[k]=!(el.getAttribute('aria-checked')==='true');saveJSON(LS.device,device);if(k==='sound'&&device.sound!==false)playCheer(100);render();}
   else if(act==='add-student'){roster.students.push({id:'s_'+uid(),name:'New student',grade:1});saveRoster();render();const inputs=document.querySelectorAll('input[data-act="rename"]');const last=inputs[inputs.length-1];if(last){last.focus();last.select();}}
   else if(act==='remove-student'){const x=roster.students.find(y=>y.id===el.dataset.id);if(!x)return;const ok=await confirmModal(`Remove ${x.name}? Their progress stays saved in case you add them back with the same name.`,'Remove',true);if(!ok)return;roster.students=roster.students.filter(y=>y.id!==x.id);if(device.activeId===x.id){device.activeId=roster.students[0].id;saveJSON(LS.device,device);}saveRoster();render();}
   else if(act==='reset'){const s=activeStudent();const ok=await confirmModal(`Erase all of ${s.name}’s progress? This can’t be undone.`,'Erase',true);if(!ok)return;progress[s.id]=blankProgress();saveProgress(s.id);render();}
