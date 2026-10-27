@@ -29,6 +29,20 @@
 }
 :root[data-theme="dark"]{ --wall:#0e1512; --board:#1f3d34; --board-deep:#172f29; --frame:#5c4430; color-scheme:dark; }
 
+:root[data-board="black"]{--board:#1f1f1f;--board-deep:#151515}
+:root[data-board="blue"]{--board:#243d5c;--board-deep:#1a2e47}
+:root[data-board="purple"]{--board:#3e2a5c;--board-deep:#2d1e45}
+:root[data-board="pink"]{--board:#722f55;--board-deep:#582340;--red:#ffa08f;--red-dim:rgba(255,160,143,.32)}
+:root[data-board="teal"]{--board:#1f4a4e;--board-deep:#163a3d}
+:root[data-board="gold"]{--board:#6a5418;--board-deep:#52400f;--yellow:#a6d8ff;--yellow-dim:rgba(166,216,255,.3)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+.swatch{width:54px;height:54px;border-radius:14px;border:2px solid var(--chalk-3);cursor:pointer;background:var(--sw);touch-action:manipulation;display:flex;align-items:flex-end;justify-content:center;font-size:.7rem;color:var(--chalk-2);padding-bottom:4px}
+.swatch[aria-pressed="true"]{border-color:var(--chalk);box-shadow:0 0 0 2px var(--board),0 0 0 4px var(--chalk)}
+.cheer{font-family:var(--hand);color:var(--yellow);font-size:clamp(30px,6.5vw,46px);line-height:1.1;margin:6px 0 10px;transform:rotate(-2deg);transform-origin:left}
+.cele{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+.cele i{position:absolute;top:-6vh;width:var(--s);height:var(--s);background:currentColor;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);opacity:0;animation:fall var(--d) ease-in var(--dl) forwards,twinkle .7s ease-in-out var(--dl) infinite alternate;filter:drop-shadow(0 0 3px currentColor)}
+@keyframes fall{0%{transform:translateY(0) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translateY(112vh) rotate(300deg);opacity:.8}}
+@keyframes twinkle{from{scale:.7}to{scale:1.2}}
 *,*::before,*::after{box-sizing:border-box}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;touch-action:manipulation;background:var(--board);color:var(--chalk);font-family:var(--font);font-size:17px;line-height:1.4;-webkit-tap-highlight-color:transparent}
@@ -371,6 +385,9 @@ let roster=loadJSON(LS.roster)||defaultRoster();
 if(!roster.settings)roster.settings=defaultRoster().settings;
 if(!roster.students||!roster.students.length)roster.students=defaultRoster().students;
 let device=loadJSON(LS.device)||{};
+const BOARDS=[['green','Green','#23443a'],['black','Black','#1f1f1f'],['blue','Blue','#243d5c'],['purple','Purple','#3e2a5c'],['pink','Pink','#722f55'],['teal','Teal','#1f4a4e'],['gold','Gold','#6a5418']];
+function applyBoard(){document.documentElement.dataset.board=device.theme||'green';const m=document.querySelector('meta[name=theme-color]');const b=BOARDS.find(x=>x[0]===(device.theme||'green'));if(m&&b)m.setAttribute('content',b[2]);}
+applyBoard();
 const progress={};
 function getProgress(id){if(!progress[id]){const p=loadJSON(LS.progress(id))||blankProgress();if(!p.facts)p.facts={};if(!p.sessions)p.sessions=[];if(!p.best)p.best={};progress[id]=p;}return progress[id];}
 function activeStudent(){let s=roster.students.find(x=>x.id===device.activeId);if(!s){s=roster.students[0];device.activeId=s.id;saveJSON(LS.device,device);}return s;}
@@ -439,6 +456,8 @@ function weakFacts(p,facts,limit){
   return out.sort((a,b)=>b.score-a.score).slice(0,limit);
 }
 function fmtTime(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function cheerFor(pct,name){const n=name?', '+name:'';const g=pct>=100?['Perfect round'+n+'!','Every single one!','Flawless.']:pct>=90?['Great work'+n+'!','You’re on a roll!','Strong round'+n+'.']:pct>=70?['Good job, keep going!','Getting there'+n+'!','Nice effort.']:['Every try counts'+n+'.','Tomorrow you’ll get more.','Keep at it'+n+'.'];return g[Math.floor(Math.random()*g.length)];}
+function celebrate(pct){if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;document.querySelectorAll('.cele').forEach(e=>e.remove());const n=pct>=90?52:pct>=70?30:16;const el=document.createElement('div');el.className='cele';const cols=['var(--yellow)','var(--chalk)','var(--yellow)','#ffd6e7','#bfe3ff','var(--chalk)'];let h='';for(let i=0;i<n;i++){const sz=8+Math.random()*16;h+=`<i style="left:${(Math.random()*100).toFixed(1)}%;--s:${sz.toFixed(0)}px;--d:${(2.6+Math.random()*2.6).toFixed(1)}s;--dl:${(Math.random()*1.8).toFixed(1)}s;color:${cols[i%cols.length]}"></i>`;}el.innerHTML=h;document.body.appendChild(el);setTimeout(()=>el.remove(),6000);}
 function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 function dayKey(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function goalSecs(){return (Number(roster.settings.goal)||10)*60;}
@@ -608,14 +627,14 @@ function endSession(partial){
   let newBest=false;
   if(S.mode==='timed'){const b=p.best[lv.id];const cand={pct,secs,ts:rec.ts};if(!b||better(cand,b)){p.best[lv.id]=cand;newBest=true;}}
   saveProgress(S.student.id);
-  S.result={rec,newBest};state.view='results';render();
+  S.result={rec,newBest,cheer:cheerFor(pct,S.student.name)};state.view='results';render();celebrate(pct);
 }
 function viewResults(){
   const {rec,newBest}=S.result;const lv=S.lv;const timed=rec.mode==='timed';
   const missed=rec.missed.map(k=>factFromKey(k)).filter(Boolean);
   const ppm=rec.secs?Math.round(10*rec.answered/(rec.secs/60))/10:0;
   let line2=timed?(rec.timedOut?`Time ran out — ${rec.answered} of ${rec.total} answered`:`Finished in ${fmtTime(rec.secs)} of ${fmtTime(rec.limit)}`):`${rec.total} problems in ${fmtTime(rec.secs)}${rec.partial?' (stopped early)':''}`;
-  const html=`<div class="page"><h1>${esc(lv.title)} · ${timed?'Timed test':'Practice'}</h1>
+  const html=`<div class="page"><h1>${esc(lv.title)} · ${timed?'Timed test':'Practice'}</h1><div class="cheer">${esc(S.result.cheer||'')}</div>
   <div class="report"><div class="biggrade">${rec.pct}%</div><div class="line1">${rec.correct} of ${rec.total} right${timed?'':' on the first try'}</div><div class="line2">${line2}</div><div class="line3">${ppm} answers per minute${timed&&newBest?' · <span class="best">New best for this level</span>':''}</div></div>
   ${missed.length?`<h2>Missed <small>study these</small></h2><div class="chips">${missed.map(f=>`<span class="chip red">${esc(factText(f))} = <b>${f.ans}</b></span>`).join('')}</div>`:`<p class="muted">Nothing missed.</p>`}
   ${tonightStrip(S.prog)}
@@ -746,6 +765,8 @@ function viewSetup(){
   <h2>Students</h2>`;
   roster.students.forEach(x=>{html+=`<div class="srow"><input type="text" value="${esc(x.name)}" data-act="rename" data-id="${x.id}" aria-label="Name" maxlength="24"><select data-act="set-grade" data-id="${x.id}" aria-label="Grade"><option value="1" ${x.grade==1?'selected':''}>First grade</option><option value="2" ${x.grade==2?'selected':''}>Second grade</option><option value="3" ${x.grade==3?'selected':''}>Third grade</option></select><button class="btn sm" data-act="remove-student" data-id="${x.id}" ${roster.students.length<=1?'disabled':''}>Remove</button></div>`;});
   html+=`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="add-student">Add a student</button></div>
+  <h2>Chalkboard color <small>this device</small></h2>
+  <div class="swatches">${BOARDS.map(b=>`<button class="swatch" style="--sw:${b[2]}" data-act="set-board" data-v="${b[0]}" aria-pressed="${(device.theme||'green')===b[0]}" aria-label="${b[1]}">${b[1]}</button>`).join('')}</div>
   <h2>Answering</h2>
   <div class="field"><div class="lab">Enter answers automatically<small>Moves on as soon as the right number of digits is typed. Turn off to require ↵.</small></div>${sw('autoSubmit',st.autoSubmit!==false)}</div>
   <div class="field"><div class="lab">Problem layout<small>Stacked like a worksheet, or in a line like a flash card. Division is always in a line.</small></div><div class="seg"><button data-act="set" data-k="layout" data-v="stacked" aria-pressed="${st.layout!=='line'}">Stacked</button><button data-act="set" data-k="layout" data-v="line" aria-pressed="${st.layout==='line'}">In a line</button></div></div>
@@ -789,6 +810,7 @@ document.addEventListener('click',async e=>{
   else if(act==='cal-pick'){state.calPicked=el.dataset.k;document.querySelectorAll('.cal .d[aria-pressed="true"]').forEach(c=>c.setAttribute('aria-pressed','false'));el.setAttribute('aria-pressed','true');$('#caldetail').textContent=calDetail(byDay(getProgress(activeStudent().id)),state.calPicked);}
   else if(act==='toggle'){const k=el.dataset.k;roster.settings[k]=!(el.getAttribute('aria-checked')==='true');saveRoster();render();}
   else if(act==='set'){const k=el.dataset.k;let v=el.dataset.v;if(k!=='layout')v=Number(v);roster.settings[k]=v;saveRoster();render();}
+  else if(act==='set-board'){device.theme=el.dataset.v;saveJSON(LS.device,device);applyBoard();render();}
   else if(act==='add-student'){roster.students.push({id:'s_'+uid(),name:'New student',grade:1});saveRoster();render();const inputs=document.querySelectorAll('input[data-act="rename"]');const last=inputs[inputs.length-1];if(last){last.focus();last.select();}}
   else if(act==='remove-student'){const x=roster.students.find(y=>y.id===el.dataset.id);if(!x)return;const ok=await confirmModal(`Remove ${x.name}? Their progress stays saved in case you add them back with the same name.`,'Remove',true);if(!ok)return;roster.students=roster.students.filter(y=>y.id!==x.id);if(device.activeId===x.id){device.activeId=roster.students[0].id;saveJSON(LS.device,device);}saveRoster();render();}
   else if(act==='reset'){const s=activeStudent();const ok=await confirmModal(`Erase all of ${s.name}’s progress? This can’t be undone.`,'Erase',true);if(!ok)return;progress[s.id]=blankProgress();saveProgress(s.id);render();}
@@ -813,7 +835,7 @@ document.addEventListener('keydown',e=>{
 $('#scrim').addEventListener('click',closeSheet);
 $('#scrim2').addEventListener('click',()=>closeModal(false));
 
-window.MF={get state(){return state;},get roster(){return roster;},setRoster(r){roster=r;saveJSON(LS.roster,roster);},render,renderTop,getProgress,activeStudent,saveProgress,mergeProgress,openSheet,closeSheet,confirmModal,esc,uid,fmtTime,tonightStrip,saveJSON,loadJSON,LS,GRADE_NAMES,SESSION_CAP,better};
+window.MF={get state(){return state;},get roster(){return roster;},setRoster(r){roster=r;saveJSON(LS.roster,roster);},render,renderTop,getProgress,activeStudent,saveProgress,mergeProgress,openSheet,closeSheet,confirmModal,esc,uid,fmtTime,tonightStrip,saveJSON,loadJSON,LS,GRADE_NAMES,SESSION_CAP,better,cheerFor,celebrate};
 render();
 initDb();
 })();
@@ -1038,9 +1060,9 @@ function endLesson(partial){if(!L||L.ended)return;L.ended=true;const p=L.prog,l=
   const rec={id:M.uid(),ts:Date.now(),lv:l.id,mode:'lesson',total,answered:total,correct,secs,limit:0,pct,missed:[],partial:!!partial};
   p.sessions.push(rec);if(p.sessions.length>M.SESSION_CAP)p.sessions=p.sessions.slice(-M.SESSION_CAP);
   let newBest=false;const b=p.best[l.id];const cand={pct,secs,ts:rec.ts};if(!b||M.better(cand,b)){p.best[l.id]=cand;newBest=true;}
-  M.saveProgress(L.student.id);L.result={rec,newBest};M.state.view='lresults';M.render();}
+  M.saveProgress(L.student.id);L.result={rec,newBest,cheer:M.cheerFor(pct,L.student.name)};M.state.view='lresults';M.render();M.celebrate(pct);}
 function viewResults(){const {rec,newBest}=L.result;const l=L.lesson;
-  return `<div class="page"><h1>${esc(l.title)} · Lesson</h1><div class="report"><div class="biggrade">${rec.pct}%</div><div class="line1">${rec.correct} of ${rec.total} right on the first try</div><div class="line2">${rec.total} problems in ${M.fmtTime(rec.secs)}${rec.partial?' (stopped early)':''}</div><div class="line3">${newBest?'<span class="best">New best for this lesson</span>':''}</div></div>
+  return `<div class="page"><h1>${esc(l.title)} · Lesson</h1><div class="cheer">${esc(L.result.cheer||'')}</div><div class="report"><div class="biggrade">${rec.pct}%</div><div class="line1">${rec.correct} of ${rec.total} right on the first try</div><div class="line2">${rec.total} problems in ${M.fmtTime(rec.secs)}${rec.partial?' (stopped early)':''}</div><div class="line3">${newBest?'<span class="best">New best for this lesson</span>':''}</div></div>
   ${L.missed.length?`<h2>Missed <small>the strategy to remember</small></h2>${L.missed.map(p=>`<div class="lmiss"><div>${p.q}</div><div class="lhint">${esc(p.hint)}</div></div>`).join('')}`:'<p class="muted">Nothing missed.</p>'}
   ${M.tonightStrip(L.prog)}
   <div class="row" style="margin-top:18px"><button class="btn big primary" data-act="ls-start" data-id="${l.id}">Do it again</button><button class="btn big" data-act="nav" data-view="lessons">All lessons</button></div>
